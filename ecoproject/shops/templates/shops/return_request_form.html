@@ -1,0 +1,46 @@
+{% extends "shops/base.html" %}
+{% load humanize %}
+
+{% block title %}Yêu cầu hoàn trả đơn hàng #{{ order.id }} - MOTOSHOP{% endblock %}
+
+{% block extra_css %}
+<style>
+    .return-card { border-radius: 15px; border: none; box-shadow: 0 10px 30px rgba(0,0,0,0.05); }
+    .btn-submit { border-radius: 10px; padding: 0.8rem 2rem; font-weight: 700; background-color: #ff3333; border: none; color: #fff; transition: all 0.3s; }
+    .btn-submit:hover { background-color: #e60000; transform: translateY(-2px); }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-6">
+            <div class="card return-card">
+                <div class="card-body p-4 p-md-5">
+                    <h2 class="fw-bold mb-4 text-center">Yêu cầu hoàn trả</h2>
+                    <p class="text-muted text-center mb-5">Vui lòng cung cấp lý do và hình ảnh minh chứng để chúng tôi xem xét yêu cầu hoàn trả cho đơn hàng <strong>#{{ order.id }}</strong>.</p>
+                    
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        <div class="mb-4">
+                            <label class="form-label fw-bold">Lý do hoàn trả <span class="text-danger">*</span></label>
+                            <textarea name="reason" class="form-control" rows="5" placeholder="Mô tả chi tiết lý do bạn muốn hoàn trả sản phẩm..." required></textarea>
+                        </div>
+                        
+                        <div class="mb-5">
+                            <label class="form-label fw-bold">Hình ảnh minh chứng (không bắt buộc)</label>
+                            <input type="file" name="image" class="form-control" accept="image/*">
+                            <small class="text-muted mt-2 d-block">Hình ảnh thực tế sẽ giúp quá trình duyệt nhanh hơn.</small>
+                        </div>
+                        
+                        <div class="d-grid gap-3 d-md-flex justify-content-md-center">
+                            <a href="{% url 'shops:order_detail' order.id %}" class="btn btn-outline-secondary px-4">Hủy bỏ</a>
+                            <button type="submit" class="btn btn-submit">Gửi yêu cầu hoàn trả</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

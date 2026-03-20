@@ -141,7 +141,10 @@ class Order(models.Model):
         ('confirmed', 'Confirmed'),
         ('processing', 'Processing'),
         ('completed', 'Completed'),
-        ('cancelled', 'Cancelled')
+        ('cancelled', 'Cancelled'),
+        ('return_requested', 'Return Requested'),
+        ('returned', 'Returned'),
+        ('refunded', 'Refunded'),
     ]
 
     user = models.ForeignKey(
@@ -179,6 +182,14 @@ class Order(models.Model):
             return self.total_price * (self.voucher.discount_percent / 100)
         return 0
 
+    @property
+    def can_cancel(self):
+        return self.status == 'pending'
+
+    @property
+    def can_return(self):
+        return self.status == 'completed'
+
 
 class OrderItem(models.Model):
     order = models.ForeignKey(
@@ -201,3 +212,12 @@ class OrderItem(models.Model):
     @property
     def subtotal(self):
         return self.price * self.quantity
+
+class ReturnRequest(models.Model):
+    order = models.OneToOneField(Order, on_delete=models.CASCADE, related_name='return_request')
+    reason = models.TextField()
+    image = models.ImageField(upload_to='returns/', blank=True, null=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Return Request for Order #{self.order.id}"

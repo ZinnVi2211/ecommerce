@@ -9,7 +9,7 @@ from django.http import JsonResponse
 from django.utils import timezone
 from django.urls import reverse
 
-from .models import Category, Product, Cart, CartItem, Order, OrderItem, Voucher
+from .models import Category, Product, Cart, CartItem, Order, OrderItem, Voucher, ReturnRequest
 from .forms import ProductForm, CategoryForm, CheckoutForm, OrderStatusForm
 
 def index(request):
@@ -562,3 +562,90 @@ def order_history(request):
         orders = Order.objects.filter(user=request.user).order_by('-created_at')
     
     return render(request, 'shops/order_history.html', {'orders': orders})
+
+@login_required
+def order_detail(request, pk):
+    if request.user.is_staff:
+        order = get_object_or_404(Order, pk=pk)
+    else:
+        order = get_object_or_404(Order, pk=pk, user=request.user)
+    
+    items = order.items.select_related('product').all()
+    # For admin status form
+    status_choices = Order.STATUS_CHOICES
+    
+    return render(request, 'shops/order_detail.html', {
+        'order': order,
+        'items': items,
+        'status_choices': status_choices
+    })
+
+@login_required
+def order_cancel(request, pk):
+    if request.method == 'POST':
+        order = get_object_or_404(Order, pk=pk, user=request.user)
+        if order.can_cancel:
+            order.status = 'cancelled'
+            order.save()
+            messages.success(request, f'Đơn hàng #{order.id} đã được hủy thành công.')
+        else:
+            messages.error(request, 'Không thể hủy đơn hàng này.')
+    return redirect('shops:order_detail', pk=pk)
+
+@login_required
+def order_return_request(request, pk):
+    # This view now redirects to the form
+    return redirect('shops:order_return_request_form', pk=pk)
+
+@login_required
+def order_return_request_form(request, pk):
+    order = get_object_or_404(Order, pk=pk, user=request.user)
+    if not order.can_return:
+        messages.error(request, 'Không thể yêu cầu hoàn trả cho đơn hàng này.')
+        return redirect('shops:order_detail', pk=pk)
+    
+    if request.method == 'POST':
+        reason = request.POST.get('reason')
+        image = request.FILES.get('image')
+        if reason:
+            with transaction.atomic():
+                ReturnRequest.objects.create(
+                    order=order,
+                    reason=reason,
+                    image=image
+                )
+                order.status = 'return_requested'
+                order.save()
+            messages.success(request, f'Yêu cầu hoàn trả cho đơn hàng #{order.id} đã được gửi thành công.')
+            return redirect('shops:order_detail', pk=pk)
+        else:
+            messages.error(request, 'Vui lòng nhập lý do hoàn trả.')
+            
+    return render(request, 'shops/return_request_form.html', {'order': order})
+
+@staff_member_required
+def admin_return_requests_list(request):
+    requests = ReturnRequest.objects.select_related('order').order_by('-created_at')
+    return render(request, 'shops/admin_return_requests.html', {'requests': requests})
+
+@staff_member_required
+def admin_confirm_payment(request, pk):
+    if request.method == 'POST':
+        order = get_object_or_404(Order, pk=pk)
+        order.payment_status = 'paid'
+        order.save()
+        messages.success(request, f'Đã xác nhận thanh toán cho đơn hàng #{order.id}.')
+    return redirect('shops:order_detail', pk=pk)
+
+@staff_member_required
+def admin_update_order_status(request, pk):
+    if request.method == 'POST':
+        order = get_object_or_404(Order, pk=pk)
+        new_status = request.POST.get('status')
+        if new_status in dict(Order.STATUS_CHOICES):
+            order.status = new_status
+            order.save()
+            messages.success(request, f'Trạng thái đơn hàng #{order.id} đã được cập nhật thành {order.get_status_display()}.')
+        else:
+            messages.error(request, 'Trạng thái không hợp lệ.')
+    return redirect('shops:order_detail', pk=pk)

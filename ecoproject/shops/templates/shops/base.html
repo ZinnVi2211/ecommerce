@@ -66,8 +66,12 @@
                 <ul class="navbar-nav mx-auto">
                     <li class="nav-item"><a class="nav-link" href="{% url 'shops:index' %}">Trang chủ</a></li>
                     <li class="nav-item"><a class="nav-link" href="{% url 'shops:product_list' %}">Sản phẩm</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Dịch vụ</a></li>
-                    <li class="nav-item"><a class="nav-link" href="#">Khuyến mãi</a></li>
+                    {% if user.is_authenticated %}
+                        <li class="nav-item"><a class="nav-link" href="{% url 'shops:order_history' %}">Đơn hàng</a></li>
+                        {% if user.is_staff %}
+                            <li class="nav-item"><a class="nav-link text-warning" href="{% url 'shops:admin_return_requests_list' %}">Quản lý hoàn trả</a></li>
+                        {% endif %}
+                    {% endif %}
                 </ul>
                 <ul class="navbar-nav align-items-center">
                     <li class="nav-item me-3">
@@ -87,7 +91,6 @@
                             </a>
                             <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
                                 <li><a class="dropdown-item" href="#">Hồ sơ của tôi</a></li>
-                                <li><a class="dropdown-item" href="{% url 'shops:order_history' %}"><i class="bi bi-clock-history me-2"></i>Đơn hàng</a></li>
                                 <li><hr class="dropdown-divider border-secondary"></li>
                                 <li>
                                     <form method="post" action="/users/logout/">

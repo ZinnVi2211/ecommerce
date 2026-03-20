@@ -1,0 +1,228 @@
+{% extends "shops/base.html" %}
+{% load humanize %}
+
+{% block title %}Chi tiết đơn hàng #{{ order.id }} - MOTOSHOP{% endblock %}
+
+{% block extra_css %}
+<style>
+    .order-status-badge {
+        font-weight: 700; padding: 0.4rem 1rem; border-radius: 6px; text-transform: uppercase; font-size: 0.75rem;
+        letter-spacing: 0.5px;
+    }
+    .status-pending { background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; }
+    .status-confirmed { background-color: #cce5ff; color: #004085; border: 1px solid #b8daff; }
+    .status-processing { background-color: #d1ecf1; color: #0c5460; border: 1px solid #bee5eb; }
+    .status-completed { background-color: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
+    .status-cancelled { background-color: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
+    .status-return_requested { background-color: #e2e3e5; color: #383d41; border: 1px solid #d6d8db; }
+    
+    .info-card { 
+        background: #fff; border: 1px solid #edf2f7; border-radius: 12px; 
+        padding: 1.5rem; height: 100%; transition: all 0.3s ease;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .info-card:hover { box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+    .info-label { color: #718096; font-size: 0.8rem; text-transform: uppercase; font-weight: 600; margin-bottom: 0.5rem; }
+    .info-value { color: #2d3748; font-weight: 600; font-size: 1rem; }
+    
+    .product-table-card { border-radius: 12px; border: 1px solid #edf2f7; background: #fff; overflow: hidden; }
+    .product-img { width: 64px; height: 64px; object-fit: cover; border-radius: 8px; }
+    
+    .btn-action { border-radius: 8px; padding: 0.6rem 1.5rem; font-weight: 700; transition: all 0.2s; font-size: 0.9rem; }
+    .btn-cancel-outline { background: #fff; border: 2px solid #e53e3e; color: #e53e3e; }
+    .btn-cancel-outline:hover { background: #e53e3e; color: #fff; }
+    
+    .admin-panel { background: #1a202c; color: #fff; border-radius: 12px; padding: 1.5rem; }
+    .admin-panel select { background: #2d3748; color: #fff; border: 1px solid #4a5568; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Top Header -->
+    <div class="row align-items-end mb-4">
+        <div class="col-md-8">
+            <nav aria-label="breadcrumb" class="mb-2">
+                <ol class="breadcrumb mb-0" style="font-size: 0.85rem;">
+                    <li class="breadcrumb-item"><a href="{% url 'shops:order_history' %}" class="text-decoration-none">Lịch sử</a></li>
+                    <li class="breadcrumb-item active">Đơn hàng #{{ order.id }}</li>
+                </ol>
+            </nav>
+            <h1 class="h2 fw-bold mb-0">Đơn hàng #{{ order.id }}</h1>
+            <p class="text-muted small mb-0"><i class="bi bi-calendar3 me-1"></i>Ngày đặt: {{ order.created_at|date:"d/m/Y H:i" }}</p>
+        </div>
+        <div class="col-md-4 text-md-end mt-3 mt-md-0">
+            <div class="d-flex flex-wrap justify-content-md-end gap-2">
+                <span class="order-status-badge status-{{ order.status }}">
+                    <i class="bi bi-circle-fill me-1" style="font-size: 0.5rem; vertical-align: middle;"></i>
+                    {{ order.get_status_display }}
+                </span>
+                {% if order.status == 'pending' %}
+                    <form action="{% url 'shops:order_cancel' order.id %}" method="post" class="d-inline">
+                        {% csrf_token %}
+                        <button type="submit" class="btn btn-action btn-cancel-outline py-1 px-3" onclick="return confirm('Hủy đơn hàng này?')">
+                            <i class="bi bi-trash3 me-1"></i>Hủy đơn
+                        </button>
+                    </form>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }} alert-dismissible fade show mb-4 border-0 shadow-sm" role="alert">
+                <i class="bi {% if message.tags == 'success' %}bi-check-circle{% else %}bi-exclamation-triangle{% endif %} me-2"></i>
+                {{ message }}
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Info Grid to fill space -->
+    <div class="row g-3 mb-4">
+        <div class="col-md-4">
+            <div class="info-card">
+                <div class="info-label"><i class="bi bi-person me-1"></i>Thông tin người nhận</div>
+                <div class="info-value">{{ order.full_name }}</div>
+                <div class="text-muted small mt-1">{{ order.phone }}</div>
+                <div class="text-muted small">{{ order.email }}</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="info-card">
+                <div class="info-label"><i class="bi bi-geo-alt me-1"></i>Địa chỉ giao hàng</div>
+                <div class="info-value" style="font-size: 0.95rem;">{{ order.address }}</div>
+                <div class="text-muted small mt-1">{{ order.city }}</div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="info-card border-start border-4 border-danger">
+                <div class="info-label"><i class="bi bi-credit-card me-1"></i>Thanh toán</div>
+                <div class="d-flex justify-content-between align-items-center">
+                    <span class="info-value text-danger fs-4">{{ order.total_price|intcomma }}₫</span>
+                    <span class="badge {% if order.payment_status == 'paid' %}bg-success{% else %}bg-warning text-dark{% endif %} p-2">
+                        {{ order.get_payment_status_display }}
+                    </span>
+                </div>
+                <div class="text-muted small mt-2">
+                    PT: {{ order.get_payment_type_display }}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <div class="col-lg-8">
+            <!-- Products Table -->
+            <div class="product-table-card shadow-sm">
+                <div class="p-3 bg-light border-bottom d-flex justify-content-between align-items-center">
+                    <h5 class="mb-0 fw-bold" style="font-size: 1.1rem;">Sản phẩm trong đơn</h5>
+                    <span class="badge bg-secondary rounded-pill px-3">{{ items.count }} sản phẩm</span>
+                </div>
+                <div class="table-responsive">
+                    <table class="table table-hover align-middle mb-0">
+                        <thead>
+                            <tr class="text-uppercase text-muted" style="font-size: 0.75rem; letter-spacing: 1px;">
+                                <th class="ps-4">Sản phẩm</th>
+                                <th>Số lượng</th>
+                                <th>Đơn giá</th>
+                                <th class="text-end pe-4">Thành tiền</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for item in items %}
+                            <tr>
+                                <td class="ps-4 py-3">
+                                    <div class="d-flex align-items-center">
+                                        {% if item.product.image or item.product.image_url %}
+                                            <img src="{% if item.product.image %}{{ item.product.image.url }}{% else %}{{ item.product.image_url }}{% endif %}" class="product-img me-3" alt="{{ item.product.name }}">
+                                        {% else %}
+                                            <div class="product-img bg-light d-flex align-items-center justify-content-center me-3 text-muted"> <i class="bi bi-image"></i> </div>
+                                        {% endif %}
+                                        <div>
+                                            <div class="fw-bold text-dark">{{ item.product.name }}</div>
+                                            <div class="text-muted x-small" style="font-size: 0.75rem;">
+                                                {% for key, val in item.config.items %} {{ key|capfirst }}: {{ val }} {% if not forloop.last %}|{% endif %} {% endfor %}
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>x{{ item.quantity }}</td>
+                                <td>{{ item.price|intcomma }}₫</td>
+                                <td class="text-end pe-4 fw-bold text-dark">{{ item.subtotal|intcomma }}₫</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Return Action if applicable -->
+            {% if order.status == 'completed' %}
+                <div class="mt-4 text-center p-4 bg-light rounded-3 border">
+                    <p class="mb-3 fw-bold"><i class="bi bi-question-circle me-1"></i>Bạn không hài lòng với sản phẩm?</p>
+                    <a href="{% url 'shops:order_return_request_form' order.id %}" class="btn btn-action border-secondary text-secondary">
+                        <i class="bi bi-arrow-return-left me-2"></i>Yêu cầu hoàn trả hàng/hoàn tiền
+                    </a>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="col-lg-4">
+            <!-- Payment Detailed Summary -->
+            {% if order.payment_type == 'deposit' %}
+            <div class="card mb-4 border-0 shadow-sm">
+                <div class="card-body">
+                    <h6 class="fw-bold mb-3">Chi tiết thanh toán cọc</h6>
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Giá trị đơn hàng:</span>
+                        <span>{{ order.total_price|intcomma }}₫</span>
+                    </div>
+                    <div class="d-flex justify-content-between mb-2 text-success">
+                        <span>Tiền đã đặt cọc:</span>
+                        <span class="fw-bold">-{{ order.deposit_amount|intcomma }}₫</span>
+                    </div>
+                    <hr>
+                    <div class="d-flex justify-content-between">
+                        <span class="fw-bold">Số tiền còn lại:</span>
+                        <span class="fw-bold text-danger fs-5">{{ order.remaining_amount|intcomma }}₫</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Admin Logic -->
+            {% if user.is_staff %}
+            <div class="admin-panel shadow-lg">
+                <div class="d-flex align-items-center mb-3">
+                    <div class="bg-danger rounded-circle p-1 me-2"></div>
+                    <h6 class="mb-0 fw-bold">Quản trị viên</h6>
+                </div>
+                <form action="{% url 'shops:admin_update_order_status' order.id %}" method="post">
+                    {% csrf_token %}
+                    <label class="small text-secondary mb-2">CẬP NHẬT TRẠNG THÁI</label>
+                    <select name="status" class="form-select form-select-sm mb-3">
+                        {% for status_key, status_label in status_choices %}
+                            <option value="{{ status_key }}" {% if order.status == status_key %}selected{% endif %}>
+                                {{ status_label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                    <button type="submit" class="btn btn-danger btn-sm w-100 fw-bold mb-3">LƯU THAY ĐỔI</button>
+                </form>
+                
+                {% if order.payment_status != 'paid' %}
+                <form action="{% url 'shops:admin_confirm_payment' order.id %}" method="post">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-success btn-sm w-100 fw-bold">
+                        <i class="bi bi-check2-circle me-1"></i>XÁC NHẬN THANH TOÁN
+                    </button>
+                </form>
+                {% endif %}
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,65 @@
+{% extends "shops/base.html" %}
+{% load humanize %}
+
+{% block title %}Quản lý yêu cầu hoàn trả - MOTOSHOP Admin{% endblock %}
+
+{% block extra_css %}
+<style>
+    .admin-header { background: #1a202c; color: #fff; padding: 3rem 0; margin-bottom: 3rem; }
+    .request-card { border-radius: 12px; border: 1px solid #edf2f7; transition: all 0.3s; }
+    .request-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.05); }
+    .product-thumb { width: 50px; height: 50px; object-fit: cover; border-radius: 6px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="admin-header">
+    <div class="container">
+        <h1 class="fw-bold mb-2"><i class="bi bi-shield-lock me-2 text-danger"></i>Quản lý hoàn trả</h1>
+        <p class="text-secondary mb-0">Danh sách các yêu cầu hoàn trả hàng/hoàn tiền từ khách hàng.</p>
+    </div>
+</div>
+
+<div class="container pb-5">
+    {% if requests %}
+        <div class="row g-4">
+            {% for req in requests %}
+                <div class="col-12">
+                    <div class="card request-card">
+                        <div class="card-body p-4">
+                            <div class="row align-items-center">
+                                <div class="col-md-2">
+                                    <div class="small text-muted text-uppercase fw-bold">Đơn hàng</div>
+                                    <h5 class="fw-bold mb-0">#{{ req.order.id }}</h5>
+                                    <div class="small text-muted">{{ req.created_at|date:"d/m/Y H:i" }}</div>
+                                </div>
+                                <div class="col-md-3">
+                                    <div class="small text-muted text-uppercase fw-bold">Khách hàng</div>
+                                    <div class="fw-bold">{{ req.order.full_name }}</div>
+                                    <div class="small">{{ req.order.phone }}</div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="small text-muted text-uppercase fw-bold">Lý do hoàn trả</div>
+                                    <div class="text-truncate" style="max-width: 300px;">{{ req.reason }}</div>
+                                </div>
+                                <div class="col-md-3 text-end">
+                                    <a href="{% url 'shops:order_detail' req.order.id %}" class="btn btn-outline-dark btn-sm rounded-pill px-4 me-2">Xem chi tiết</a>
+                                    {% if req.image %}
+                                        <a href="{{ req.image.url }}" target="_blank" class="btn btn-outline-primary btn-sm rounded-pill px-3"><i class="bi bi-image me-1"></i>Ảnh</a>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="text-center py-5 bg-white rounded-4 shadow-sm border">
+            <i class="bi bi-check2-circle display-1 text-success opacity-25 mb-4"></i>
+            <h4 class="fw-bold">Không có yêu cầu nào</h4>
+            <p class="text-muted">Tất cả yêu cầu hoàn trả đã được xử lý xong.</p>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

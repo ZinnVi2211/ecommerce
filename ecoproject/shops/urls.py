@@ -25,6 +25,13 @@ urlpatterns = [
     path('success/', views.order_success, name='order_success'),
     path('order-status/', views.order_status, name='order_status'),
     path('order-history/', views.order_history, name='order_history'),
+    path('order/<int:pk>/', views.order_detail, name='order_detail'),
+    path('order/<int:pk>/cancel/', views.order_cancel, name='order_cancel'),
+    path('order/<int:pk>/return/', views.order_return_request, name='order_return_request'),
+    path('order/<int:pk>/update-status/', views.admin_update_order_status, name='admin_update_order_status'),
+    path('order/<int:pk>/return-form/', views.order_return_request_form, name='order_return_request_form'),
+    path('admin/returns/', views.admin_return_requests_list, name='admin_return_requests_list'),
+    path('order/<int:pk>/confirm-payment/', views.admin_confirm_payment, name='admin_confirm_payment'),
     path('product/<slug:slug>/', views.product_detail_view, name='product_detail'),
     # Redirect old motorcycle links to new product detail
     path('motorcycles/<slug:slug>/', RedirectView.as_view(pattern_name='shops:product_detail', permanent=True)),

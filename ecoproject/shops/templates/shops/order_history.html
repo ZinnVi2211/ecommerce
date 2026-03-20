@@ -161,6 +161,9 @@
                                             {% elif order.status == 'processing' %}Đang xử lý
                                             {% elif order.status == 'completed' %}Hoàn tất
                                             {% elif order.status == 'cancelled' %}Đã hủy
+                                            {% elif order.status == 'return_requested' %}Yêu cầu hoàn trả
+                                            {% elif order.status == 'returned' %}Đã trả hàng
+                                            {% elif order.status == 'refunded' %}Đã hoàn tiền
                                             {% else %}{{ order.status }}{% endif %}
                                         </span>
                                     </td>
@@ -182,14 +185,9 @@
                                         </div>
                                     </td>
                                     <td class="text-end">
-                                        <form action="{% url 'shops:order_status' %}" method="POST" class="d-inline">
-                                            {% csrf_token %}
-                                            <input type="hidden" name="order_id" value="{{ order.id }}">
-                                            <input type="hidden" name="phone_or_email" value="{{ order.phone }}">
-                                            <button type="submit" class="btn-detail">
-                                                <i class="bi bi-eye me-1"></i>Chi tiết
-                                            </button>
-                                        </form>
+                                        <a href="{% url 'shops:order_detail' order.id %}" class="btn-detail text-decoration-none">
+                                            <i class="bi bi-eye me-1"></i>Chi tiết
+                                        </a>
                                     </td>
                                 </tr>
                             {% endfor %}
