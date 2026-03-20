@@ -173,6 +173,12 @@
         display: flex;
         gap: 5px;
     }
+    .wishlist-action {
+        position: absolute;
+        top: 10px;
+        left: 10px;
+        z-index: 10;
+    }
 
     .btn-admin {
         width: 32px;
@@ -279,6 +285,16 @@
                                 </div>
                                 {% endif %}
                             </a>
+                            {% if user.is_authenticated %}
+                            <div class="wishlist-action">
+                                <a href="#" class="wishlist-btn {% if product.id in wishlist_product_ids %}active{% endif %}"
+                                   data-wishlist-toggle="{% url 'shops:wishlist_toggle' product.id %}"
+                                   title="Y?u th?ch">
+                                    <i class="bi {% if product.id in wishlist_product_ids %}bi-heart-fill{% else %}bi-heart{% endif %}"></i>
+                                </a>
+                            </div>
+                            {% endif %}
+
                             
                             {% if user.is_staff %}
                             <div class="admin-actions">

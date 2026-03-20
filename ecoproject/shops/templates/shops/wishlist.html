@@ -1,0 +1,81 @@
+{% extends 'shops/base.html' %}
+{% load humanize %}
+
+{% block title %}Danh sách yêu thích | MotoShop{% endblock %}
+
+{% block extra_css %}
+<style>
+    .wishlist-hero {
+        background: linear-gradient(120deg, rgba(255,51,51,0.12), rgba(18,18,18,0.04));
+        padding: 48px 0;
+        margin-bottom: 24px;
+    }
+    .wishlist-card {
+        border: 0;
+        border-radius: 16px;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+        overflow: hidden;
+        background: #fff;
+    }
+    .wishlist-img {
+        height: 160px;
+        object-fit: cover;
+        width: 100%;
+    }
+    .wishlist-actions .btn { border-radius: 999px; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="wishlist-hero">
+    <div class="container">
+        <h2 class="fw-bold mb-1">Xe mô tô yêu thích</h2>
+        <p class="text-muted mb-0">Quản lý các mẫu xe bạn quan tâm để mua sau.</p>
+    </div>
+</section>
+
+<div class="container pb-5">
+    {% if wishlist_items %}
+    <div class="row g-4">
+        {% for item in wishlist_items %}
+        <div class="col-md-6 col-lg-4">
+            <div class="wishlist-card">
+                {% if item.product.image_url %}
+                    <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" class="wishlist-img">
+                {% elif item.product.image %}
+                    <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="wishlist-img">
+                {% else %}
+                    <div class="d-flex align-items-center justify-content-center bg-light wishlist-img">
+                        <i class="bi bi-image fs-1 text-muted"></i>
+                    </div>
+                {% endif %}
+                <div class="p-3">
+                    <h5 class="mb-1">{{ item.product.name }}</h5>
+                    <div class="text-danger fw-bold mb-3">{{ item.product.price|intcomma }}đ</div>
+                    <div class="d-flex flex-wrap gap-2 wishlist-actions">
+                        <a href="{{ item.product.get_absolute_url }}" class="btn btn-dark btn-sm">Xem chi tiết</a>
+                        <form method="post" action="{% url 'shops:add_to_cart' item.product.id %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-outline-danger btn-sm">Chuyển vào giỏ</button>
+                        </form>
+                        <a href="#" class="btn btn-outline-secondary btn-sm"
+                           data-wishlist-toggle="{% url 'shops:wishlist_toggle' item.product.id %}"
+                           data-remove-card="1">
+                            <i class="bi bi-heartbreak me-1"></i> Bỏ yêu thích
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <i class="bi bi-heart fs-1 text-muted mb-3 d-block"></i>
+        <h4>Chưa có sản phẩm yêu thích</h4>
+        <p class="text-muted">Hãy thêm các mẫu xe bạn thích để theo dõi nhanh hơn.</p>
+        <a href="{% url 'shops:product_list' %}" class="btn btn-danger rounded-pill px-4">Khám phá xe ngay</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

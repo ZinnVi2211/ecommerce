@@ -1,16 +1,55 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.generic import ListView, DetailView
-from django.http import Http404
+from django.http import Http404, JsonResponse, HttpResponse
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.db import transaction
-from django.http import JsonResponse
+from django.db.models import Sum, Count, Value, DecimalField
+from django.db.models.functions import TruncDate, Coalesce
 from django.utils import timezone
 from django.urls import reverse
+from datetime import timedelta, datetime
+import json
+import csv
 
-from .models import Category, Product, Cart, CartItem, Order, OrderItem, Voucher, ReturnRequest
+from .models import (
+    Cart,
+    CartItem,
+    Category,
+    Notification,
+    Order,
+    OrderItem,
+    Product,
+    ReturnRequest,
+    Voucher,
+    Wishlist,
+)
 from .forms import ProductForm, CategoryForm, CheckoutForm, OrderStatusForm
+
+
+def _parse_date(value):
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, "%Y-%m-%d").date()
+    except ValueError:
+        return None
+
+
+def _notification_to_dict(notification):
+    return {
+        'id': notification.id,
+        'title': notification.title,
+        'message': notification.message,
+        'type': notification.type,
+        'is_read': notification.is_read,
+        'link': notification.link,
+        'created_at': timezone.localtime(notification.created_at).strftime('%Y-%m-%d %H:%M'),
+        'read_url': reverse('shops:notification_read', args=[notification.id]),
+    }
+
+
 
 def index(request):
     products = Product.objects.filter(available=True).order_by('-created')[:8]
@@ -113,14 +152,29 @@ def product_create(request):
 def product_update(request, id):
     product = get_object_or_404(Product, id=id)
     if request.method == 'POST':
+        old_price = product.price
         form = ProductForm(request.POST, request.FILES, instance=product)
         if form.is_valid():
-            form.save()
-            messages.success(request, f'Sản phẩm "{product.name}" đã được cập nhật!')
+            updated_product = form.save()
+            if updated_product.price < old_price and updated_product.available:
+                wishlist_user_ids = Wishlist.objects.filter(product=updated_product).values_list('user_id', flat=True)
+                notifications = [
+                    Notification(
+                        user_id=user_id,
+                        title='Gi?m gi? s?n ph?m y?u th?ch',
+                        message=f'S?n ph?m "{updated_product.name}" v?a gi?m gi?. Xem ngay!',
+                        type='wishlist',
+                        link=updated_product.get_absolute_url()
+                    )
+                    for user_id in wishlist_user_ids
+                ]
+                if notifications:
+                    Notification.objects.bulk_create(notifications)
+            messages.success(request, f'S?n ph?m "{product.name}" ?? ???c c?p nh?t!')
             return redirect('shops:product_list')
     else:
         form = ProductForm(instance=product)
-    return render(request, 'shops/product_form.html', {'form': form, 'title': 'Cập nhật sản phẩm', 'product': product})
+    return render(request, 'shops/product_form.html', {'form': form, 'title': 'C?p nh?t s?n ph?m', 'product': product})
 
 @staff_member_required
 def product_delete(request, id):
@@ -488,6 +542,256 @@ def order_status(request):
     return render(request, 'shops/order_status.html', {
         'form': form,
         'order': order,
+    })
+
+
+@login_required
+def toggle_wishlist(request, product_id):
+    if request.method != 'POST':
+        return JsonResponse({'error': 'Method not allowed'}, status=405)
+
+    product = Product.objects.filter(id=product_id).first()
+    if not product:
+        return JsonResponse({'error': 'Product not found'}, status=404)
+
+    wishlist_item = Wishlist.objects.filter(user=request.user, product=product).first()
+    if wishlist_item:
+        wishlist_item.delete()
+        status = 'removed'
+    else:
+        Wishlist.objects.get_or_create(user=request.user, product=product)
+        status = 'added'
+
+    wishlist_count = Wishlist.objects.filter(user=request.user).count()
+    return JsonResponse({'status': status, 'wishlist_count': wishlist_count})
+
+
+@login_required
+def wishlist_view(request):
+    wishlist_items = (Wishlist.objects
+                      .filter(user=request.user, product__available=True)
+                      .select_related('product')
+                      .order_by('-created_at'))
+    return render(request, 'shops/wishlist.html', {
+        'wishlist_items': wishlist_items,
+    })
+
+
+@login_required
+def notification_list_view(request):
+    try:
+        page = int(request.GET.get('page', 1) or 1)
+    except ValueError:
+        page = 1
+    page_size = 10
+    qs = Notification.objects.filter(user=request.user).order_by('-created_at')
+    total = qs.count()
+    start = (page - 1) * page_size
+    end = start + page_size
+    notifications = list(qs[start:end])
+    has_next = total > end
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({
+            'notifications': [_notification_to_dict(n) for n in notifications],
+            'has_next': has_next,
+            'unread_count': Notification.objects.filter(user=request.user, is_read=False).count(),
+        })
+
+    return render(request, 'shops/notifications.html', {
+        'notifications': notifications,
+        'has_next': has_next,
+    })
+
+
+@login_required
+def notification_dropdown_api(request):
+    notifications = Notification.objects.filter(user=request.user).order_by('-created_at')[:5]
+    unread_count = Notification.objects.filter(user=request.user, is_read=False).count()
+    return JsonResponse({
+        'notifications': [_notification_to_dict(n) for n in notifications],
+        'unread_count': unread_count,
+    })
+
+
+@login_required
+def mark_as_read(request, id):
+    notification = get_object_or_404(Notification, id=id, user=request.user)
+    if not notification.is_read:
+        notification.is_read = True
+        notification.save(update_fields=['is_read'])
+
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'ok'})
+
+    next_url = request.GET.get('next') or notification.link or reverse('shops:notification_list')
+    return redirect(next_url)
+
+
+@login_required
+def mark_all_as_read(request):
+    Notification.objects.filter(user=request.user, is_read=False).update(is_read=True)
+    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
+        return JsonResponse({'status': 'ok'})
+    return redirect('shops:notification_list')
+
+
+@staff_member_required
+def admin_dashboard_view(request):
+    today = timezone.localdate()
+    paid_orders = Order.objects.filter(payment_status='paid')
+    zero_decimal = Value(0, output_field=DecimalField(max_digits=12, decimal_places=0))
+
+    total_revenue = paid_orders.aggregate(total=Coalesce(Sum('total_price'), zero_decimal))['total']
+    today_revenue = paid_orders.filter(created_at__date=today).aggregate(total=Coalesce(Sum('total_price'), zero_decimal))['total']
+    monthly_revenue = paid_orders.filter(
+        created_at__year=today.year,
+        created_at__month=today.month
+    ).aggregate(total=Coalesce(Sum('total_price'), zero_decimal))['total']
+
+    start_date = _parse_date(request.GET.get('start_date'))
+    end_date = _parse_date(request.GET.get('end_date'))
+    if start_date and end_date and start_date > end_date:
+        start_date, end_date = end_date, start_date
+
+    orders_range_qs = Order.objects.all()
+    if start_date and end_date:
+        orders_range_qs = orders_range_qs.filter(created_at__date__range=(start_date, end_date))
+    elif start_date:
+        orders_range_qs = orders_range_qs.filter(created_at__date__gte=start_date)
+    elif end_date:
+        orders_range_qs = orders_range_qs.filter(created_at__date__lte=end_date)
+
+    if request.GET.get('export') == 'orders':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="orders_export.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['Order ID', 'Customer', 'Payment Type', 'Payment Status', 'Total', 'Created At'])
+        for order in orders_range_qs.order_by('-created_at'):
+            writer.writerow([
+                order.id,
+                order.full_name,
+                order.get_payment_type_display(),
+                order.get_payment_status_display(),
+                order.total_price,
+                order.created_at.strftime('%Y-%m-%d %H:%M')
+            ])
+        return response
+
+    orders_count = orders_range_qs.count()
+    products_sold = OrderItem.objects.filter(order__in=orders_range_qs).aggregate(
+        total=Coalesce(Sum('quantity'), 0)
+    )['total']
+
+    best_sellers = (OrderItem.objects
+                    .filter(order__in=orders_range_qs)
+                    .values('product__id', 'product__name')
+                    .annotate(total_qty=Coalesce(Sum('quantity'), 0))
+                    .order_by('-total_qty', 'product__name')[:5])
+
+    top_favorites = (Wishlist.objects
+                     .values('product__id', 'product__name')
+                     .annotate(fav_count=Count('id'))
+                     .order_by('-fav_count', 'product__name')[:5])
+
+    low_stock_products = Product.objects.filter(stock__lt=5).order_by('stock', 'name')
+    low_stock_count = low_stock_products.count()
+
+    payment_stats = {
+        'deposit_count': orders_range_qs.filter(payment_type='deposit').count(),
+        'full_count': orders_range_qs.filter(payment_type='full').count(),
+        'showroom_count': orders_range_qs.filter(payment_type='showroom').count(),
+    }
+
+    recent_orders = (orders_range_qs
+                     .select_related('user')
+                     .order_by('-created_at')[:10])
+
+    start_7 = today - timedelta(days=6)
+    daily_revenue = (paid_orders
+                     .filter(created_at__date__range=(start_7, today))
+                     .annotate(day=TruncDate('created_at'))
+                     .values('day')
+                     .annotate(total=Coalesce(Sum('total_price'), zero_decimal))
+                     .order_by('day'))
+    daily_map = {row['day']: row['total'] for row in daily_revenue}
+
+    revenue_chart_labels = []
+    revenue_chart_values = []
+    for i in range(7):
+        day = start_7 + timedelta(days=i)
+        revenue_chart_labels.append(day.strftime('%d/%m'))
+        revenue_chart_values.append(float(daily_map.get(day, 0)))
+
+    payment_chart_labels = ['Đặt cọc', 'Thanh toán đủ', 'Tại showroom']
+    payment_chart_values = [
+        payment_stats['deposit_count'],
+        payment_stats['full_count'],
+        payment_stats['showroom_count'],
+    ]
+
+    notifications = {
+        'pending_orders': orders_range_qs.filter(status='pending').count(),
+        'unpaid_orders': orders_range_qs.filter(payment_status='unpaid').count(),
+        'low_stock': low_stock_count,
+    }
+
+    context = {
+        'total_revenue': total_revenue,
+        'today_revenue': today_revenue,
+        'monthly_revenue': monthly_revenue,
+        'orders_count': orders_count,
+        'products_sold': products_sold,
+        'best_sellers': best_sellers,
+        'top_favorites': top_favorites,
+        'low_stock_products': low_stock_products,
+        'low_stock_count': low_stock_count,
+        'payment_stats': payment_stats,
+        'recent_orders': recent_orders,
+        'revenue_chart_labels': json.dumps(revenue_chart_labels),
+        'revenue_chart_values': json.dumps(revenue_chart_values),
+        'payment_chart_labels': json.dumps(payment_chart_labels),
+        'payment_chart_values': json.dumps(payment_chart_values),
+        'start_date': start_date.isoformat() if start_date else '',
+        'end_date': end_date.isoformat() if end_date else '',
+        'date_range_active': bool(start_date or end_date),
+        'notifications': notifications,
+    }
+    return render(request, 'shops/dashboard.html', context)
+
+
+@staff_member_required
+def dashboard_api(request):
+    today = timezone.localdate()
+    start_7 = today - timedelta(days=6)
+    paid_orders = Order.objects.filter(payment_status='paid')
+    zero_decimal = Value(0, output_field=DecimalField(max_digits=12, decimal_places=0))
+
+    daily_revenue = (paid_orders
+                     .filter(created_at__date__range=(start_7, today))
+                     .annotate(day=TruncDate('created_at'))
+                     .values('day')
+                     .annotate(total=Coalesce(Sum('total_price'), zero_decimal))
+                     .order_by('day'))
+    daily_map = {row['day']: row['total'] for row in daily_revenue}
+    revenue_data = []
+    for i in range(7):
+        day = start_7 + timedelta(days=i)
+        revenue_data.append({
+            'date': day.isoformat(),
+            'total': float(daily_map.get(day, 0)),
+        })
+
+    orders_qs = Order.objects.all()
+    payment_stats = {
+        'deposit': orders_qs.filter(payment_type='deposit').count(),
+        'full': orders_qs.filter(payment_type='full').count(),
+        'showroom': orders_qs.filter(payment_type='showroom').count(),
+    }
+
+    return JsonResponse({
+        'revenue_data': revenue_data,
+        'payment_stats': payment_stats,
     })
 
 

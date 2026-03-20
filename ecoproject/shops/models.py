@@ -1,5 +1,6 @@
 from django.db import models
 from django.urls import reverse
+from django.conf import settings
 
 class Category(models.Model):
     name = models.CharField(max_length=200, db_index=True)
@@ -49,6 +50,48 @@ class Product(models.Model):
     def get_absolute_url(self):
         return reverse('shops:product_detail',
                        args=[self.slug])
+
+
+class Wishlist(models.Model):
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='wishlists')
+    product = models.ForeignKey(Product, on_delete=models.CASCADE, related_name='wishlisted_by')
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        unique_together = ('user', 'product')
+        verbose_name = 'wishlist'
+        verbose_name_plural = 'wishlists'
+
+    def __str__(self):
+        return f"{self.user} ❤ {self.product}"
+
+
+class Notification(models.Model):
+    TYPE_CHOICES = [
+        ('order', 'Order'),
+        ('payment', 'Payment'),
+        ('promotion', 'Promotion'),
+        ('wishlist', 'Wishlist'),
+    ]
+
+    user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='notifications')
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    type = models.CharField(max_length=20, choices=TYPE_CHOICES, default='order')
+    is_read = models.BooleanField(default=False)
+    link = models.URLField(blank=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        indexes = [
+            models.Index(fields=['user', 'is_read']),
+        ]
+        ordering = ['-created_at']
+        verbose_name = 'notification'
+        verbose_name_plural = 'notifications'
+
+    def __str__(self):
+        return f"{self.title} ({self.user})"
 
 
 class Cart(models.Model):

@@ -34,7 +34,7 @@ ALLOWED_HOSTS = []
 
 INSTALLED_APPS = [
     'users',
-    'shops',
+    'shops.apps.ShopsConfig',
     'django.contrib.admin',
     'django.contrib.auth',
     'django.contrib.contenttypes',
@@ -70,6 +70,7 @@ TEMPLATES = [
                 'django.contrib.messages.context_processors.messages',
                 'shops.context_processors.cart_count',
                 'shops.context_processors.notification_context',
+                'shops.context_processors.wishlist_context',
             ],
         },
     },

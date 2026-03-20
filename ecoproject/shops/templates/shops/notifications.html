@@ -1,0 +1,118 @@
+{% extends 'shops/base.html' %}
+
+{% block title %}Thông báo | MotoShop{% endblock %}
+
+{% block extra_css %}
+<style>
+    .notif-hero {
+        background: linear-gradient(120deg, rgba(255,51,51,0.1), rgba(0,0,0,0.04));
+        padding: 48px 0;
+        margin-bottom: 24px;
+    }
+    .notif-card {
+        border-radius: 16px;
+        border: 1px solid #eef0f6;
+        background: #fff;
+        box-shadow: 0 10px 24px rgba(15, 23, 42, 0.08);
+        padding: 16px 18px;
+        transition: transform 0.2s ease;
+    }
+    .notif-card.unread {
+        border-left: 4px solid #ff3333;
+        background: #fff7f7;
+    }
+    .notif-card:hover { transform: translateY(-2px); }
+    .notif-time { font-size: 0.85rem; color: #64748b; }
+    .notif-actions .btn { border-radius: 999px; }
+    .load-more { cursor: pointer; }
+</style>
+{% endblock %}
+
+{% block content %}
+<section class="notif-hero">
+    <div class="container d-flex flex-column flex-md-row justify-content-between align-items-md-center gap-3">
+        <div>
+            <h2 class="fw-bold mb-1">Thông báo</h2>
+            <p class="text-muted mb-0">Cập nhật mới nhất về đơn hàng, thanh toán và ưu đãi.</p>
+        </div>
+        <form method="post" action="{% url 'shops:notification_read_all' %}">
+            {% csrf_token %}
+            <button class="btn btn-dark">Đánh dấu tất cả đã đọc</button>
+        </form>
+    </div>
+</section>
+
+<div class="container pb-5">
+    <div id="notificationList" class="d-flex flex-column gap-3">
+        {% for n in notifications %}
+        <a href="{% url 'shops:notification_read' n.id %}?next={{ n.link|urlencode }}" class="text-decoration-none text-dark">
+            <div class="notif-card {% if not n.is_read %}unread{% endif %}">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h6 class="fw-bold mb-1">{{ n.title }}</h6>
+                        <p class="mb-1">{{ n.message }}</p>
+                    </div>
+                    <span class="notif-time">{{ n.created_at|date:"Y-m-d H:i" }}</span>
+                </div>
+            </div>
+        </a>
+        {% empty %}
+        <div class="text-center py-5">
+            <i class="bi bi-bell fs-1 text-muted mb-3 d-block"></i>
+            <h4>Chưa có thông báo</h4>
+            <p class="text-muted">Các cập nhật mới sẽ xuất hiện tại đây.</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    {% if has_next %}
+    <div class="text-center mt-4">
+        <button id="loadMoreBtn" class="btn btn-outline-secondary load-more">Tải thêm</button>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    let notifPage = 1;
+    const listEl = document.getElementById('notificationList');
+    const loadMoreBtn = document.getElementById('loadMoreBtn');
+
+    async function loadMoreNotifications() {
+        notifPage += 1;
+        const res = await fetch(`{% url 'shops:notification_list' %}?page=${notifPage}`, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+        const data = await res.json();
+        data.notifications.forEach(n => {
+            const a = document.createElement('a');
+            a.href = `${n.read_url}?next=${encodeURIComponent(n.link || '')}`;
+            a.className = 'text-decoration-none text-dark';
+            a.innerHTML = `
+                <div class="notif-card ${n.is_read ? '' : 'unread'}">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div>
+                            <h6 class="fw-bold mb-1">${n.title}</h6>
+                            <p class="mb-1">${n.message}</p>
+                        </div>
+                        <span class="notif-time">${n.created_at}</span>
+                    </div>
+                </div>`;
+            listEl.appendChild(a);
+        });
+        if (!data.has_next && loadMoreBtn) {
+            loadMoreBtn.remove();
+        }
+    }
+
+    if (loadMoreBtn) {
+        loadMoreBtn.addEventListener('click', loadMoreNotifications);
+        window.addEventListener('scroll', () => {
+            if (loadMoreBtn && window.innerHeight + window.scrollY >= document.body.offsetHeight - 200) {
+                loadMoreNotifications();
+            }
+        });
+    }
+</script>
+{% endblock %}
