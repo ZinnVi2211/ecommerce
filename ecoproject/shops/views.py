@@ -1,4 +1,5 @@
 from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
 from django.views.generic import ListView, DetailView
 from django.http import Http404
 from django.contrib.admin.views.decorators import staff_member_required
@@ -12,7 +13,8 @@ from .models import Category, Product, Cart, CartItem, Order, OrderItem, Voucher
 from .forms import ProductForm, CategoryForm, CheckoutForm, OrderStatusForm
 
 def index(request):
-    return render(request, 'shops/index.html')
+    products = Product.objects.filter(available=True).order_by('-created')[:8]
+    return render(request, 'shops/index.html', {'products': products})
 
 def product_list(request, category_slug=None):
     category = None
@@ -198,27 +200,14 @@ def cart_view(request):
     cart = _get_or_create_cart(request)
     items = cart.items.select_related('product').all()
 
-    voucher_code = request.session.get('voucher_code')
-    voucher = None
-    discount_value = 0
-    if voucher_code:
-        voucher = Voucher.objects.filter(code__iexact=voucher_code).first()
-        if voucher and voucher.is_valid():
-            discount_value = (cart.total_price() * voucher.discount_percent) / 100
-        else:
-            voucher = None
-            request.session.pop('voucher_code', None)
-
     subtotal = cart.total_price()
-    total = max(0, subtotal - discount_value)
+    total = subtotal
 
     return render(request, 'shops/cart.html', {
         'cart': cart,
         'items': items,
         'subtotal': subtotal,
-        'discount': discount_value,
         'total': total,
-        'voucher': voucher,
     })
 
 
@@ -287,45 +276,6 @@ def update_cart_item(request, id):
     return redirect('shops:cart_view')
 
 
-def apply_voucher(request):
-    if request.method != 'POST':
-        return redirect('shops:cart_view')
-
-    cart = _get_or_create_cart(request)
-    subtotal = cart.total_price()
-    code = request.POST.get('code', '').strip()
-    voucher = Voucher.objects.filter(code__iexact=code).first()
-
-    if not voucher or not voucher.is_valid():
-        messages.error(request, 'Mã voucher không hợp lệ hoặc đã hết hạn.')
-        request.session.pop('voucher_code', None)
-        if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-            return JsonResponse({
-                'success': False,
-                'message': 'Voucher không hợp lệ.',
-                'subtotal': float(subtotal),
-                'discount': 0,
-                'total': float(subtotal),
-            })
-        return redirect('shops:cart_view')
-
-    request.session['voucher_code'] = voucher.code
-    request.session.modified = True
-    messages.success(request, f'Áp dụng voucher {voucher.code} thành công ({voucher.discount_percent}% giảm).')
-
-    if request.headers.get('x-requested-with') == 'XMLHttpRequest':
-        discount_value = (subtotal * voucher.discount_percent) / 100
-        total = max(0, subtotal - discount_value)
-        return JsonResponse({
-            'success': True,
-            'code': voucher.code,
-            'discount_percent': voucher.discount_percent,
-            'subtotal': float(subtotal),
-            'discount': float(discount_value),
-            'total': float(total),
-        })
-
-    return redirect('shops:cart_view')
 
 
 def checkout_view(request):
@@ -350,19 +300,9 @@ def checkout_view(request):
             messages.error(request, 'Giỏ hàng trống. Vui lòng thêm sản phẩm trước khi thanh toán.')
             return redirect('shops:cart_view')
 
-    voucher = None
-    discount_value = 0
-    voucher_code = request.session.get('voucher_code')
-    if voucher_code:
-        voucher = Voucher.objects.filter(code__iexact=voucher_code).first()
-        if voucher and voucher.is_valid():
-            discount_value = (cart.total_price() * voucher.discount_percent) / 100
-        else:
-            voucher = None
-            request.session.pop('voucher_code', None)
 
     subtotal = cart.total_price()
-    total = max(0, subtotal - discount_value)
+    total = subtotal
 
     if request.method == 'POST':
         return place_order(request)
@@ -379,9 +319,7 @@ def checkout_view(request):
         'form': form,
         'items': items,
         'subtotal': subtotal,
-        'discount': discount_value,
         'total': total,
-        'voucher': voucher,
         'buy_now': bool(buy_now),
     })
 
@@ -615,3 +553,12 @@ def product_detail_view(request, slug):
         'versions': versions,
         'related_products': related_products
     })
+
+@login_required
+def order_history(request):
+    if request.user.is_staff:
+        orders = Order.objects.all().order_by('-created_at')
+    else:
+        orders = Order.objects.filter(user=request.user).order_by('-created_at')
+    
+    return render(request, 'shops/order_history.html', {'orders': orders})

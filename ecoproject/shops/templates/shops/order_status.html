@@ -57,7 +57,7 @@
                         <ul class="list-group">
                             {% for item in order.items.all %}
                             <li class="list-group-item d-flex justify-content-between align-items-center">
-                                <span>{{ item.product.name if item.product else 'Sản phẩm đã xóa' }} x{{ item.quantity }}</span>
+                                <span>{% if item.product %}{{ item.product.name }}{% else %}Sản phẩm đã xóa{% endif %} x{{ item.quantity }}</span>
                                 <span>{{ item.subtotal|intcomma }}đ</span>
                             </li>
                             {% endfor %}

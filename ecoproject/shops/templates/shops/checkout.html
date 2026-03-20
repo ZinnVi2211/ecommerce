@@ -90,7 +90,6 @@
                 </ul>
 
                 <p class="mb-1">Tạm tính: <strong id="subtotal-amount">{{ subtotal|intcomma }}đ</strong></p>
-                <p class="mb-1">Giảm giá: <strong id="discount-amount">{{ discount|intcomma }}đ</strong></p>
                 <hr />
                 <h4>Tổng thanh toán: <strong id="total-amount">{{ total|intcomma }}đ</strong></h4>
                 <div class="mt-3">
@@ -98,10 +97,6 @@
                     <div>Còn lại: <strong id="remaining-amount">0đ</strong></div>
                 </div>
 
-                {% if voucher %}
-                <div class="alert alert-success mt-3">Đã áp dụng voucher <strong>{{ voucher.code }}</strong> ({{
-                    voucher.discount_percent }}%).</div>
-                {% endif %}
             </div>
 
             <div class="card shadow-sm p-4 mt-3" id="bank-transfer-box" style="display: none;">

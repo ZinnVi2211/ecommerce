@@ -62,13 +62,15 @@
         overflow: hidden;
         transition: transform 0.3s ease, box-shadow 0.3s ease;
         background: white;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.05);
+        box-shadow: 0 5px 15px rgba(0,0,0,0.05);
         height: 100%;
+        display: flex;
+        flex-direction: column;
     }
 
     .product-card:hover {
         transform: translateY(-8px);
-        box-shadow: 0 15px 30px rgba(0, 0, 0, 0.15);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.15);
     }
 
     .card-img-wrapper {
@@ -90,46 +92,108 @@
     }
 
     .card-body {
-        padding: 1.5rem;
+        padding: 1.25rem;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
     }
 
     .card-title {
         font-weight: 700;
-        font-size: 1.2rem;
+        font-size: 1.15rem;
         margin-bottom: 0.5rem;
         color: #1a1a1a;
         display: -webkit-box;
         -webkit-line-clamp: 2;
         -webkit-box-orient: vertical;
         overflow: hidden;
+        height: 2.8rem; /* Đảm bảo tiêu đề luôn có cùng chiều cao */
+        transition: color 0.3s ease;
     }
 
-    .card-text {
-        color: #6c757d;
-        font-size: 0.9rem;
-        margin-bottom: 1rem;
-    }
-
-    .price {
-        font-size: 1.3rem;
-        font-weight: 800;
+    .product-card:hover .card-title {
         color: #ff3333;
     }
 
-    .btn-buy {
-        background-color: transparent;
-        border: 2px solid #1a1a1a;
-        color: #1a1a1a;
-        font-weight: 600;
-        border-radius: 30px;
-        padding: 0.4rem 1.2rem;
-        transition: all 0.3s ease;
+    .price {
+        font-size: 1.25rem;
+        font-weight: 800;
+        color: #ff3333;
+        display: block;
+        margin-bottom: 1rem;
     }
 
-    .btn-buy:hover {
+    .card-actions {
+        margin-top: auto;
+        padding-top: 1rem;
+        border-top: 1px solid #f0f0f0;
+    }
+
+    .btn-detail {
+        background-color: #1a1a1a;
+        color: white;
+        font-weight: 600;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        transition: all 0.3s ease;
+        text-decoration: none;
+        display: inline-block;
+        flex: 1;
+        text-align: center;
+    }
+
+    .btn-detail:hover {
+        background-color: #333;
+        color: white;
+    }
+
+    .btn-cart-circle {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border: 2px solid #1a1a1a;
+        color: #1a1a1a;
+        transition: all 0.3s;
+        text-decoration: none;
+    }
+
+    .btn-cart-circle:hover {
         background-color: #1a1a1a;
         color: white;
     }
+
+    .admin-actions {
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 10;
+        display: flex;
+        gap: 5px;
+    }
+
+    .btn-admin {
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        color: #1a1a1a;
+        font-size: 0.8rem;
+        transition: all 0.3s;
+    }
+
+    .btn-admin:hover {
+        transform: scale(1.1);
+    }
+
+    .btn-admin-edit:hover { color: #0d6efd; }
+    .btn-admin-delete:hover { color: #dc3545; }
 </style>
 {% endblock %}
 
@@ -204,13 +268,22 @@
                 <div class="col-md-6 col-xl-4">
                     <div class="product-card">
                         <div class="card-img-wrapper">
-                            {% if product.image_url %}
-                            <img src="{{ product.image_url }}" alt="{{ product.name }}">
-                            {% elif product.image %}
-                            <img src="{{ product.image.url }}" alt="{{ product.name }}">
-                            {% else %}
-                            <div class="d-flex align-items-center justify-content-center h-100 bg-secondary text-white">
-                                <i class="bi bi-image fs-1"></i>
+                            <a href="{{ product.get_absolute_url }}">
+                                {% if product.image_url %}
+                                <img src="{{ product.image_url }}" alt="{{ product.name }}">
+                                {% elif product.image %}
+                                <img src="{{ product.image.url }}" alt="{{ product.name }}">
+                                {% else %}
+                                <div class="d-flex align-items-center justify-content-center h-100 bg-secondary text-white">
+                                    <i class="bi bi-image fs-1"></i>
+                                </div>
+                                {% endif %}
+                            </a>
+                            
+                            {% if user.is_staff %}
+                            <div class="admin-actions">
+                                <a href="{% url 'shops:product_update' product.id %}" class="btn-admin btn-admin-edit" title="Sửa"><i class="bi bi-pencil"></i></a>
+                                <a href="{% url 'shops:product_delete' product.id %}" class="btn-admin btn-admin-delete" title="Xóa"><i class="bi bi-trash"></i></a>
                             </div>
                             {% endif %}
                         </div>
@@ -221,22 +294,17 @@
                                 <span class="badge bg-danger">Đã ẩn</span>
                                 {% endif %}
                             </div>
-                            <h5 class="card-title">{{ product.name }}</h5>
-                            <div class="d-flex justify-content-between align-items-center mt-4">
-                                <span class="price">{{ product.price|intcomma }}đ</span>
-                                <div>
-                                    <a href="{% url 'shops:add_to_cart' product.id %}" class="btn btn-buy"><i
-                                            class="bi bi-cart-plus"></i></a>
-                                    {% if user.is_staff %}
-                                    <a href="{% url 'shops:product_update' product.id %}"
-                                        class="btn btn-outline-primary ms-1"
-                                        style="border-radius: 50%; padding: 0.4rem 0.6rem;" title="Sửa"><i
-                                            class="bi bi-pencil"></i></a>
-                                    <a href="{% url 'shops:product_delete' product.id %}"
-                                        class="btn btn-outline-danger ms-1"
-                                        style="border-radius: 50%; padding: 0.4rem 0.6rem;" title="Xóa"><i
-                                            class="bi bi-trash"></i></a>
-                                    {% endif %}
+                            <a href="{{ product.get_absolute_url }}" class="text-decoration-none">
+                                <h5 class="card-title">{{ product.name }}</h5>
+                            </a>
+                            <span class="price">{{ product.price|intcomma }}đ</span>
+                            
+                            <div class="card-actions">
+                                <div class="d-flex gap-2">
+                                    <a href="{{ product.get_absolute_url }}" class="btn-detail">Xem chi tiết</a>
+                                    <a href="{% url 'shops:add_to_cart' product.id %}" class="btn-cart-circle" title="Thêm vào giỏ">
+                                        <i class="bi bi-cart-plus"></i>
+                                    </a>
                                 </div>
                             </div>
                         </div>
