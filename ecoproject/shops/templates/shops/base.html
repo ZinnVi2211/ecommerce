@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}MotoShop - Đại lý Mô tô Chính Hãng{% endblock %}</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.1/font/bootstrap-icons.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: system-ui, -apple-system, sans-serif;
+            display: flex;
+            flex-direction: column;
+            min-height: 100vh;
+            background-color: #f4f6f9;
+        }
+        main { flex: 1; }
+        .navbar {
+            background-color: #121212 !important;
+            padding: 1rem 0;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .navbar-brand {
+            font-weight: 800; font-size: 1.6rem;
+            color: #ff3333 !important; text-transform: uppercase;
+        }
+        .nav-link {
+            font-weight: 500; color: #f0f0f0 !important;
+            text-transform: uppercase; font-size: 0.9rem; margin: 0 10px;
+        }
+        .nav-link:hover { color: #ff3333 !important; }
+        .btn-primary-custom {
+            background-color: #ff3333; border-color: #ff3333;
+            color: white; font-weight: 600; border-radius: 30px;
+            padding: 0.5rem 1.5rem; transition: all 0.3s ease;
+        }
+        .btn-primary-custom:hover {
+            background-color: #e60000; color: white;
+        }
+        .footer {
+            background-color: #121212; color: #b0b0b0;
+            padding: 4rem 0 2rem; margin-top: auto;
+        }
+        .footer h5 { color: #fff; font-weight: 700; margin-bottom: 1.5rem; }
+        .footer-link {
+            color: #b0b0b0; text-decoration: none;
+            display: inline-block; margin-bottom: 0.8rem;
+        }
+        .footer-link:hover { color: #ff3333; }
+    </style>
+    {% block extra_css %}{% endblock %}
+</head>
+<body>
+    <!-- Navbar -->
+    <nav class="navbar navbar-expand-lg sticky-top">
+        <div class="container">
+            <a class="navbar-brand d-flex align-items-center" href="/">
+                <i class="bi bi-motorcycle me-2 fs-3 text-danger"></i> MOTOSHOP
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav mx-auto">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'shops:index' %}">Trang chủ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'shops:product_list' %}">Sản phẩm</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Dịch vụ</a></li>
+                    <li class="nav-item"><a class="nav-link" href="#">Khuyến mãi</a></li>
+                </ul>
+                <ul class="navbar-nav align-items-center">
+                    <li class="nav-item me-3">
+                        <a class="nav-link text-white" href="#"><i class="bi bi-search"></i></a>
+                    </li>
+                    <li class="nav-item me-4">
+                        <a class="nav-link text-white position-relative" href="{% url 'shops:cart_view' %}">
+                            <i class="bi bi-bag"></i>
+                            <span class="position-absolute top-0 start-100 translate-middle badge rounded-pill bg-danger" style="font-size: 0.65rem;">{{ cart_count|default:0 }}</span>
+                        </a>
+                    </li>
+                    
+                    {% if user.is_authenticated %}
+                        <li class="nav-item dropdown">
+                            <a class="nav-link dropdown-toggle text-white d-flex align-items-center" href="#" data-bs-toggle="dropdown">
+                                <i class="bi bi-person-circle me-1 fs-5"></i> {{ user.username }}
+                            </a>
+                            <ul class="dropdown-menu dropdown-menu-end dropdown-menu-dark">
+                                <li><a class="dropdown-item" href="#">Hồ sơ của tôi</a></li>
+                                <li><a class="dropdown-item" href="#">Đơn hàng</a></li>
+                                <li><hr class="dropdown-divider border-secondary"></li>
+                                <li>
+                                    <form method="post" action="/users/logout/">
+                                        {% csrf_token %}
+                                        <button type="submit" class="dropdown-item text-danger fw-bold"><i class="bi bi-box-arrow-right me-2"></i>Đăng xuất</button>
+                                    </form>
+                                </li>
+                            </ul>
+                        </li>
+                    {% else %}
+                        <li class="nav-item"><a class="nav-link" href="{% url 'users:login' %}">Đăng nhập</a></li>
+                        <li class="nav-item ms-lg-2">
+                            <a class="btn btn-primary-custom" href="{% url 'users:register' %}">Đăng ký ngay</a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <main>
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="row g-4">
+                <div class="col-lg-4">
+                    <a class="navbar-brand d-inline-block mb-3" href="/">
+                        <i class="bi bi-motorcycle me-2 text-danger"></i> MOTOSHOP
+                    </a>
+                    <p>Đối tác nhập khẩu và phân phối chính hãng các thương hiệu mô tô đẳng cấp thế giới. Sự đam mê tốc độ và chất lượng phục vụ là kim chỉ nam của chúng tôi.</p>
+                </div>
+                <div class="col-lg-2">
+                    <h5>Danh mục</h5>
+                    <div class="d-flex flex-column">
+                        <a href="#" class="footer-link">Sportbike</a>
+                        <a href="#" class="footer-link">Naked Bike</a>
+                        <a href="#" class="footer-link">Adventure</a>
+                        <a href="#" class="footer-link">Cruiser</a>
+                    </div>
+                </div>
+                <div class="col-lg-3">
+                    <h5>Liên kết</h5>
+                    <div class="d-flex flex-column">
+                        <a href="#" class="footer-link">Chính sách bảo hành</a>
+                        <a href="#" class="footer-link">Chính sách vận chuyển</a>
+                        <a href="#" class="footer-link">Hướng dẫn mua trả góp</a>
+                    </div>
+                </div>
+                <div class="col-lg-3">
+                    <h5>Liên hệ</h5>
+                    <ul class="list-unstyled">
+                        <li class="mb-2"><i class="bi bi-geo-alt text-danger me-2"></i> 123 Đại lộ Biker, Quận 1, TP. HCM</li>
+                        <li class="mb-2"><i class="bi bi-telephone text-danger me-2"></i> 1900 8888</li>
+                        <li><i class="bi bi-envelope text-danger me-2"></i> contact@motoshop.vn</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

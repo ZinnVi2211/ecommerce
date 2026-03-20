@@ -1,0 +1,71 @@
+{% extends 'shops/base.html' %}
+{% load humanize %}
+
+{% block title %}Đặt hàng thành công | MotoShop{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="text-center">
+        <i class="bi bi-check-circle-fill fs-1 text-success"></i>
+        <h2 class="mt-3">Đặt hàng thành công!</h2>
+        <p class="text-muted">Cảm ơn bạn đã tin dùng MotoShop. Đơn hàng của bạn đã được ghi nhận.</p>
+    </div>
+
+    <div class="card shadow-sm mt-4 p-4">
+        <h5>Thông tin đơn hàng</h5>
+        <div class="row mt-3">
+            <div class="col-md-6">Mã đơn: <strong>#{{ order.id }}</strong></div>
+            <div class="col-md-6">Trạng thái: <strong class="badge bg-info text-dark">{{ order.get_status_display
+                    }}</strong></div>
+        </div>
+        <div class="row mt-2">
+            <div class="col-md-6">Tên: {{ order.full_name }}</div>
+            <div class="col-md-6">Số điện thoại: {{ order.phone }}</div>
+        </div>
+        <div class="row mt-1">
+            <div class="col-md-6">Email: {{ order.email }}</div>
+            <div class="col-md-6">Thành phố: {{ order.city }}</div>
+        </div>
+        <div class="row mt-1">
+            <div class="col-md-12">Địa chỉ: {{ order.address }}</div>
+        </div>
+        <div class="row mt-1">
+            <div class="col-md-6">Thanh toán: {{ order.get_payment_type_display }}</div>
+            <div class="col-md-6">Tổng: <strong>{{ order.total_price|intcomma }}đ</strong></div>
+        </div>
+        <div class="row mt-1">
+            <div class="col-md-6">Đã trả: <strong>{{ order.deposit_amount|intcomma }}đ</strong></div>
+            <div class="col-md-6">Còn lại: <strong>{{ order.remaining_amount|intcomma }}đ</strong></div>
+        </div>
+
+        <div class="alert alert-info mt-3">
+            Nhân viên sẽ liên hệ với bạn trong vòng 24 giờ.
+        </div>
+
+        {% if order.voucher %}
+        <div class="alert alert-success mt-3">
+            Voucher áp dụng: {{ order.voucher.code }} ({{ order.voucher.discount_percent }}% off)
+        </div>
+        {% endif %}
+
+        <div class="mt-3">
+            <a class="btn btn-primary" href="{% url 'shops:product_list' %}">Tiếp tục mua sắm</a>
+            <a class="btn btn-outline-secondary" href="{% url 'shops:cart_view' %}">Xem giỏ hàng</a>
+            <a class="btn btn-outline-info" href="{% url 'shops:order_status' %}">Theo dõi đơn hàng</a>
+        </div>
+    </div>
+
+    <div class="card shadow-sm mt-4 p-4">
+        <h5>Chi tiết sản phẩm</h5>
+        <ul class="list-group">
+            {% for item in order.items.all %}
+            <li class="list-group-item d-flex justify-content-between align-items-center">
+                <span>{% if item.product %}{{ item.product.name }}{% else %}Sản phẩm đã xóa{% endif %} x{{ item.quantity
+                    }}</span>
+                <span>{{ item.subtotal|intcomma }}đ</span>
+            </li>
+            {% endfor %}
+        </ul>
+    </div>
+</div>
+{% endblock %}

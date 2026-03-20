@@ -1,0 +1,126 @@
+{% extends 'shops/base.html' %}
+{% block title %}{{ title }} | MotoShop{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm border-0" style="border-radius: 12px; border-top: 5px solid #ff3333 !important;">
+                <div class="card-body p-4 p-md-5">
+                    <div class="text-center mb-4">
+                        <i class="bi bi-box-seam fs-1 text-danger"></i>
+                        <h2 class="fw-bold mt-2 text-uppercase">{{ title }}</h2>
+                        <p class="text-muted">{% if product %}Chỉnh sửa thông tin xe <strong>{{ product.name }}</strong>{% else %}Nhập đầy đủ thông tin để đăng bán xe mới{% endif %}</p>
+                    </div>
+
+                    <form method="post" enctype="multipart/form-data">
+                        {% csrf_token %}
+                        
+                        <div class="row g-3">
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">{{ form.category.label }}</label>
+                                {{ form.category }}
+                                <div class="text-danger small mt-1">{{ form.category.errors|striptags }}</div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">{{ form.name.label }}</label>
+                                {{ form.name }}
+                                <div class="text-danger small mt-1">{{ form.name.errors|striptags }}</div>
+                            </div>
+
+                            <div class="col-12 mb-3">
+                                <label class="form-label fw-bold">{{ form.slug.label }}</label>
+                                {{ form.slug }}
+                                <div class="text-danger small mt-1">{{ form.slug.errors|striptags }}</div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">{{ form.price.label }}</label>
+                                <div class="input-group">
+                                    {{ form.price }}
+                                    <span class="input-group-text bg-light border-start-0">VNĐ</span>
+                                </div>
+                                <div class="text-danger small mt-1">{{ form.price.errors|striptags }}</div>
+                            </div>
+                            
+                            <div class="col-md-6 mb-3">
+                                <label class="form-label fw-bold">{{ form.stock.label }}</label>
+                                {{ form.stock }}
+                                <div class="text-danger small mt-1">{{ form.stock.errors|striptags }}</div>
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label class="form-label fw-bold">{{ form.image.label }}</label>
+                                {{ form.image }}
+                                {% if product and product.image %}
+                                    <div class="mt-2 text-muted small">Ảnh hiện tại: <a href="{{ product.image.url }}" target="_blank" class="text-danger">{{ product.image.name }}</a></div>
+                                {% endif %}
+                                <div class="text-danger small mt-1">{{ form.image.errors|striptags }}</div>
+                            </div>
+
+                            <div class="col-12 mb-3">
+                                <label class="form-label fw-bold">{{ form.image_url.label }}</label>
+                                {{ form.image_url }}
+                                {% if product and product.image_url %}
+                                    <div class="mt-2 text-muted small">Link hiện tại: <a href="{{ product.image_url }}" target="_blank" class="text-danger">{{ product.image_url }}</a></div>
+                                {% endif %}
+                                <div class="text-danger small mt-1">{{ form.image_url.errors|striptags }}</div>
+                            </div>
+                            
+                            <div class="col-12 mb-3">
+                                <label class="form-label fw-bold">{{ form.description.label }}</label>
+                                {{ form.description }}
+                                <div class="text-danger small mt-1">{{ form.description.errors|striptags }}</div>
+                            </div>
+                            
+                            <div class="col-12 mb-3 form-check ms-2">
+                                {{ form.available }}
+                                <label class="form-check-label fw-bold ms-1" for="{{ form.available.id_for_label }}">
+                                    {{ form.available.label }}
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-flex justify-content-end gap-2 mt-4 pt-3 border-top">
+                            <a href="{% url 'shops:product_list' %}" class="btn btn-light border fw-bold px-4 rounded-pill">Hủy</a>
+                            <button type="submit" class="btn btn-primary-custom px-4"><i class="bi bi-check2-circle me-1"></i> Lưu thông tin</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function generateSlug() {
+        // Lấy tên
+        let title = document.getElementsByName("name")[0].value;
+        // Đổi sang chữ thường
+        let slug = title.toLowerCase();
+        // Xóa dấu tiếng Việt
+        slug = slug.replace(/á|à|ả|ạ|ã|ă|ắ|ằ|ẳ|ẵ|ặ|â|ấ|ầ|ẩ|ẫ|ậ/gi, 'a');
+        slug = slug.replace(/é|è|ẻ|ẽ|ẹ|ê|ế|ề|ể|ễ|ệ/gi, 'e');
+        slug = slug.replace(/i|í|ì|ỉ|ĩ|ị/gi, 'i');
+        slug = slug.replace(/ó|ò|ỏ|õ|ọ|ô|ố|ồ|ổ|ỗ|ộ|ơ|ớ|ờ|ở|ỡ|ợ/gi, 'o');
+        slug = slug.replace(/ú|ù|ủ|ũ|ụ|ư|ứ|ừ|ử|ữ|ự/gi, 'u');
+        slug = slug.replace(/ý|ỳ|ỷ|ỹ|ỵ/gi, 'y');
+        slug = slug.replace(/đ/gi, 'd');
+        // Xóa các ký tự đặc biệt
+        slug = slug.replace(/\`|\~|\!|\@|\#|\||\$|\%|\^|\&|\*|\(|\)|\+|\=|\,|\.|\/|\?|\>|\<|\'|\"|\:|\;|_/gi, '');
+        // Thay khoảng trắng bằng gạch ngang
+        slug = slug.replace(/ /gi, "-");
+        // Xóa gạch ngang liên tiếp
+        slug = slug.replace(/\-\-\-\-\-/gi, '-');
+        slug = slug.replace(/\-\-\-\-/gi, '-');
+        slug = slug.replace(/\-\-\-/gi, '-');
+        slug = slug.replace(/\-\-/gi, '-');
+        // Xóa gạch ngang ở đầu và cuối
+        slug = '@' + slug + '@';
+        slug = slug.replace(/\@\-|\-\@|\@/gi, '');
+        // Gán vào field slug
+        document.getElementById('id_slug').value = slug;
+    }
+</script>
+{% endblock %}

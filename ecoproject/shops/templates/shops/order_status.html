@@ -1,0 +1,73 @@
+{% extends 'shops/base.html' %}
+{% load humanize %}
+
+{% block title %}Tra cứu đơn hàng | MotoShop{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="mb-4">Tra cứu trạng thái đơn hàng</h2>
+
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}" role="alert">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-lg-5">
+            <div class="card shadow-sm p-4">
+                <h5 class="mb-3">Nhập thông tin đơn hàng</h5>
+                <form method="post" novalidate>
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.order_id.label }}</label>
+                        {{ form.order_id }}
+                        {{ form.order_id.errors }}
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">{{ form.phone_or_email.label }}</label>
+                        {{ form.phone_or_email }}
+                        {{ form.phone_or_email.errors }}
+                    </div>
+                    <button class="btn btn-primary" type="submit">Tra cứu</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-7">
+            <div class="card shadow-sm p-4">
+                <h5 class="mb-3">Kết quả</h5>
+                {% if order %}
+                    <div class="row">
+                        <div class="col-md-6">Mã đơn: <strong>#{{ order.id }}</strong></div>
+                        <div class="col-md-6">Trạng thái: <span class="badge bg-info text-dark">{{ order.get_status_display }}</span></div>
+                    </div>
+                    <div class="row mt-2">
+                        <div class="col-md-6">Khách hàng: {{ order.full_name }}</div>
+                        <div class="col-md-6">SĐT: {{ order.phone }}</div>
+                    </div>
+                    <div class="row mt-1">
+                        <div class="col-md-6">Email: {{ order.email }}</div>
+                        <div class="col-md-6">Tổng: <strong>{{ order.total_price|intcomma }}đ</strong></div>
+                    </div>
+                    <div class="mt-3">
+                        <h6>Chi tiết sản phẩm</h6>
+                        <ul class="list-group">
+                            {% for item in order.items.all %}
+                            <li class="list-group-item d-flex justify-content-between align-items-center">
+                                <span>{{ item.product.name if item.product else 'Sản phẩm đã xóa' }} x{{ item.quantity }}</span>
+                                <span>{{ item.subtotal|intcomma }}đ</span>
+                            </li>
+                            {% endfor %}
+                        </ul>
+                    </div>
+                {% else %}
+                    <div class="text-muted">Nhập thông tin để tra cứu trạng thái đơn hàng.</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

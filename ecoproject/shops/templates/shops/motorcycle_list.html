@@ -1,0 +1,72 @@
+{% extends 'shops/base.html' %}
+{% load humanize %}
+
+{% block title %}Danh sách mô tô | MotoShop{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <div class="d-flex flex-wrap justify-content-between align-items-center mb-4">
+        <h2 class="mb-2">Danh sách mô tô</h2>
+        <form class="row g-2" method="get">
+            <div class="col-auto">
+                <input type="text" name="q" value="{{ filters.q }}" class="form-control" placeholder="Tìm theo tên">
+            </div>
+            <div class="col-auto">
+                <select name="engine" class="form-select">
+                    <option value="">Tất cả động cơ</option>
+                    {% for e in engines %}
+                        <option value="{{ e }}" {% if filters.engine == e %}selected{% endif %}>{{ e }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-auto">
+                <input type="number" name="min_price" value="{{ filters.min_price }}" class="form-control" placeholder="Giá từ">
+            </div>
+            <div class="col-auto">
+                <input type="number" name="max_price" value="{{ filters.max_price }}" class="form-control" placeholder="Giá đến">
+            </div>
+            <div class="col-auto">
+                <button class="btn btn-dark" type="submit">Lọc</button>
+            </div>
+        </form>
+    </div>
+
+    <div class="row g-4">
+        {% for product in products %}
+        <div class="col-lg-4 col-md-6">
+            <div class="card h-100 shadow-sm">
+                {% if product.image_url %}
+                    <img src="{{ product.image_url }}" class="card-img-top" alt="{{ product.name }}" style="height: 220px; object-fit: cover;">
+                {% elif product.image %}
+                    <img src="{{ product.image.url }}" class="card-img-top" alt="{{ product.name }}" style="height: 220px; object-fit: cover;">
+                {% else %}
+                    <img src="https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=1000&q=80" class="card-img-top" alt="{{ product.name }}" style="height: 220px; object-fit: cover;">
+                {% endif %}
+                <div class="card-body d-flex flex-column">
+                    <h5 class="card-title">{{ product.name }}</h5>
+                    <p class="mb-1 text-muted">Động cơ: {{ product.engine|default:"N/A" }}</p>
+                    <p class="mb-2 text-muted">Tiêu hao: {{ product.fuel_consumption|default:"N/A" }}</p>
+                    <div class="mt-auto d-flex justify-content-between align-items-center">
+                        <span class="fw-bold text-danger">{{ product.price|intcomma }}đ</span>
+                        <div class="d-flex gap-2">
+                            <a href="{% url 'shops:motorcycle_detail' product.slug %}" class="btn btn-outline-dark btn-sm">View Details</a>
+                            <form method="post" action="{% url 'shops:add_to_cart' product.id %}">
+                                {% csrf_token %}
+                                <input type="hidden" name="quantity" value="1">
+                                <input type="hidden" name="color" value="{{ product.color_options|first|default:'Default' }}">
+                                <input type="hidden" name="version" value="{{ product.version_options|first|default:'Standard' }}">
+                                <button type="submit" class="btn btn-danger btn-sm">Add to Cart</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="alert alert-info">Không tìm thấy sản phẩm phù hợp.</div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

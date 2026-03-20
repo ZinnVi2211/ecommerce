@@ -1,0 +1,125 @@
+{% extends 'shops/base.html' %}
+{% load humanize %}
+
+{% block title %}{{ product.name }} | MotoShop{% endblock %}
+
+{% block extra_css %}
+<style>
+    .product-zoom img { transition: transform 0.35s ease; }
+    .product-zoom:hover img { transform: scale(1.05); }
+    .buy-box { position: sticky; top: 90px; }
+    .option-pill .btn { border-radius: 999px; }
+    .stock-badge { font-size: 0.9rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}" role="alert">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="product-zoom rounded shadow-sm overflow-hidden bg-white">
+                {% if product.image_url %}
+                    <img src="{{ product.image_url }}" class="img-fluid" alt="{{ product.name }}">
+                {% elif product.image %}
+                    <img src="{{ product.image.url }}" class="img-fluid" alt="{{ product.name }}">
+                {% else %}
+                    <img src="https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=1200&q=80" class="img-fluid" alt="{{ product.name }}">
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card shadow-sm p-4 buy-box">
+                <h2 class="mb-2">{{ product.name }}</h2>
+                <div class="text-danger fs-4 fw-bold mb-2">{{ product.price|intcomma }}đ</div>
+                {% if product.stock > 0 %}
+                    <span class="badge bg-success stock-badge">Còn hàng: {{ product.stock }}</span>
+                {% else %}
+                    <span class="badge bg-secondary stock-badge">Hết hàng</span>
+                {% endif %}
+
+                <hr>
+                <h6 class="fw-bold">Thông tin sản phẩm</h6>
+                <ul class="list-unstyled mb-3">
+                    <li>Động cơ: <strong>{{ product.engine|default:"N/A" }}</strong></li>
+                    <li>Tiêu hao: <strong>{{ product.fuel_consumption|default:"N/A" }}</strong></li>
+                    <li class="mt-2 text-muted">{{ product.description }}</li>
+                </ul>
+
+                <form method="post">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Màu sắc</label>
+                        <div class="d-flex flex-wrap gap-2 option-pill">
+                            {% for c in colors %}
+                                <input class="btn-check" type="radio" name="color" id="color-{{ forloop.counter }}" value="{{ c }}" {% if forloop.first %}checked{% endif %}>
+                                <label class="btn btn-outline-dark" for="color-{{ forloop.counter }}">{{ c }}</label>
+                            {% empty %}
+                                <input type="hidden" name="color" value="Default">
+                                <span class="text-muted">Default</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Phiên bản</label>
+                        <select name="version" class="form-select">
+                            {% for v in versions %}
+                                <option value="{{ v }}" {% if forloop.first %}selected{% endif %}>{{ v }}</option>
+                            {% empty %}
+                                <option value="Standard">Standard</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Số lượng</label>
+                        <input type="number" name="quantity" value="1" min="1" max="{{ product.stock }}" class="form-control" style="max-width: 160px;">
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" name="add_to_cart" class="btn btn-danger w-50" {% if product.stock < 1 %}disabled{% endif %}>
+                            🛒 Add to Cart
+                        </button>
+                        <button type="submit" name="buy_now" class="btn btn-outline-dark w-50" {% if product.stock < 1 %}disabled{% endif %}>
+                            ⚡ Buy Now
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    {% if related_products %}
+    <div class="mt-5">
+        <h4 class="mb-3">Sản phẩm liên quan</h4>
+        <div class="row g-4">
+            {% for p in related_products %}
+            <div class="col-md-3">
+                <div class="card h-100 shadow-sm">
+                    {% if p.image_url %}
+                        <img src="{{ p.image_url }}" class="card-img-top" alt="{{ p.name }}" style="height: 160px; object-fit: cover;">
+                    {% elif p.image %}
+                        <img src="{{ p.image.url }}" class="card-img-top" alt="{{ p.name }}" style="height: 160px; object-fit: cover;">
+                    {% else %}
+                        <img src="https://images.unsplash.com/photo-1558981403-c5f9899a28bc?auto=format&fit=crop&w=800&q=80" class="card-img-top" alt="{{ p.name }}" style="height: 160px; object-fit: cover;">
+                    {% endif %}
+                    <div class="card-body">
+                        <h6 class="card-title">{{ p.name }}</h6>
+                        <div class="text-danger fw-bold">{{ p.price|intcomma }}đ</div>
+                        <a href="{% url 'shops:product_detail' p.slug %}" class="btn btn-outline-dark btn-sm mt-2">Xem chi tiết</a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

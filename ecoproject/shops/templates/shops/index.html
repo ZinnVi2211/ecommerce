@@ -1,0 +1,245 @@
+{% extends 'shops/base.html' %}
+
+{% block title %}MotoShop - Khám phá Đam mê Bất tận{% endblock %}
+
+{% block extra_css %}
+<style>
+    .hero {
+        background: linear-gradient(rgba(0, 0, 0, 0.5), rgba(0, 0, 0, 0.7)), url('https://images.unsplash.com/photo-1558981403-c5f9899a28bc?ixlib=rb-4.0.3&auto=format&fit=crop&w=1920&q=80') no-repeat center center/cover;
+        color: white; padding: 120px 0; text-align: center;
+    }
+    .hero h1 {
+        font-size: 3.5rem; font-weight: 800; text-transform: uppercase;
+        margin-bottom: 1rem; letter-spacing: 2px;
+    }
+    .hero p { font-size: 1.25rem; margin-bottom: 2rem; font-weight: 300; }
+    .btn-hero {
+        font-size: 1.1rem; padding: 0.8rem 2rem; border-radius: 50px;
+        font-weight: 600; text-transform: uppercase; letter-spacing: 1px;
+    }
+    .section-title { text-align: center; margin-bottom: 3rem; position: relative; }
+    .section-title h2 {
+        font-weight: 800; text-transform: uppercase;
+        display: inline-block; font-size: 2.2rem; color: #1a1a1a;
+    }
+    .section-title h2::after {
+        content: ''; position: absolute; bottom: -15px; left: 50%;
+        transform: translateX(-50%); width: 80px; height: 4px; background-color: #ff3333;
+    }
+    .product-card {
+        border: none; border-radius: 12px; overflow: hidden;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+        background: white; box-shadow: 0 5px 15px rgba(0,0,0,0.05); height: 100%;
+    }
+    .product-card:hover {
+        transform: translateY(-10px); box-shadow: 0 15px 30px rgba(0,0,0,0.15);
+    }
+    .card-img-wrapper { position: relative; overflow: hidden; aspect-ratio: 4/3; }
+    .product-card img {
+        width: 100%; height: 100%; object-fit: cover; transition: transform 0.5s ease;
+    }
+    .product-card:hover img { transform: scale(1.1); }
+    .badge-custom {
+        position: absolute; top: 15px; left: 15px; background-color: #ff3333;
+        color: white; padding: 5px 15px; border-radius: 20px;
+        font-weight: 600; font-size: 0.8rem; z-index: 2;
+    }
+    .card-body { padding: 1.5rem; }
+    .card-title { font-weight: 700; font-size: 1.2rem; margin-bottom: 0.5rem; color: #1a1a1a; }
+    .card-text { color: #6c757d; font-size: 0.9rem; margin-bottom: 1rem; }
+    .price { font-size: 1.3rem; font-weight: 800; color: #ff3333; }
+    .btn-buy {
+        background-color: transparent; border: 2px solid #1a1a1a;
+        color: #1a1a1a; font-weight: 600; border-radius: 30px;
+        padding: 0.4rem 1.2rem; transition: all 0.3s ease;
+    }
+    .btn-buy:hover { background-color: #1a1a1a; color: white; }
+    .features-section { background-color: #121212; color: white; padding: 4rem 0; }
+    .feature-box { text-align: center; padding: 1.5rem; transition: transform 0.3s ease; }
+    .feature-box:hover { transform: translateY(-10px); }
+    .feature-icon { font-size: 2.5rem; color: #ff3333; margin-bottom: 1rem; }
+    .feature-title { font-weight: 700; margin-bottom: 0.8rem; font-size: 1.1rem; }
+</style>
+{% endblock %}
+
+{% block content %}
+<!-- Hero Section -->
+<section class="hero">
+    <div class="container">
+        <h1>Sức Mạnh Bứt Phá</h1>
+        <p>Khám phá bộ sưu tập siêu xe mô tô mới nhất 2026. Trải nghiệm tốc độ đỉnh cao cùng MotoShop.</p>
+        <div class="mt-4">
+            <a href="{% url 'shops:product_list' %}" class="btn btn-primary btn-hero me-3 border-0" style="background-color: #ff3333;">Xem Sản Phẩm</a>
+            <a href="{% url 'shops:cart_view' %}" class="btn btn-outline-light btn-hero me-3">Giỏ Hàng</a>
+            <a href="{% url 'shops:checkout_view' %}" class="btn btn-outline-light btn-hero">Thanh Toán</a>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Categories -->
+<section class="py-5 mt-3">
+    <div class="container">
+        <div class="row g-4 text-center">
+            <div class="col-md-4">
+                <div class="p-4 bg-white rounded shadow-sm border-bottom border-danger border-4 h-100">
+                    <i class="bi bi-speedometer2 fs-1 text-danger mb-3"></i>
+                    <h4 class="fw-bold">Sportbike</h4>
+                    <p class="text-muted">Tốc độ tối đa, thiết kế khí động học hoàn hảo mang dáng dấp của những chiếc xe đua chuyên nghiệp.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-4 bg-white rounded shadow-sm border-bottom border-danger border-4 h-100">
+                    <i class="bi bi-bicycle fs-1 text-danger mb-3"></i>
+                    <h4 class="fw-bold">Naked Bike</h4>
+                    <p class="text-muted">Mạnh mẽ, cơ bắp và linh hoạt trên phố. Dòng xe hoàn hảo cho việc đi lại hàng ngày lẫn những chuyến đi ngắn.</p>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="p-4 bg-white rounded shadow-sm border-bottom border-danger border-4 h-100">
+                    <i class="bi bi-compass fs-1 text-danger mb-3"></i>
+                    <h4 class="fw-bold">Adventure</h4>
+                    <p class="text-muted">Khám phá mọi miền với dòng xe địa hình ưu việt, bền bỉ và thoải mái cho những hành trình dài.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+
+<!-- Featured Products -->
+<section class="py-5 bg-light">
+    <div class="container">
+        <div class="section-title">
+            <h2>Mô tô nổi bật</h2>
+        </div>
+        
+        <div class="row g-4">
+            <!-- Product 1 -->
+            <div class="col-lg-3 col-md-6">
+                <div class="product-card">
+                    <div class="card-img-wrapper">
+                        <span class="badge-custom">Mới</span>
+                        <img src="https://images.unsplash.com/photo-1568772585407-9b48bceee2dc?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Yamaha R1">
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small">Sportbike</span>
+                            <div class="text-warning small"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-half"></i></div>
+                        </div>
+                        <h5 class="card-title">Yamaha YZF-R1 2026</h5>
+                        <p class="card-text">998cc, 4 xi-lanh, 200 mã lực. Đỉnh cao tốc độ.</p>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <span class="price">729.000.000đ</span>
+                            <a href="{% url 'shops:cart_view' %}" class="btn btn-buy"><i class="bi bi-cart-plus"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Product 2 -->
+            <div class="col-lg-3 col-md-6">
+                <div class="product-card">
+                    <div class="card-img-wrapper">
+                        <span class="badge-custom" style="background-color: #28a745;">Bán chạy</span>
+                        <img src="https://images.unsplash.com/photo-1620801835741-f09c25da3829?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Kawasaki Z900">
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small">Naked Bike</span>
+                            <div class="text-warning small"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div>
+                        </div>
+                        <h5 class="card-title">Kawasaki Z900 ABS</h5>
+                        <p class="card-text">948cc, kiểu dáng Sugomi đầy mạnh mẽ.</p>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <span class="price">288.000.000đ</span>
+                            <a href="{% url 'shops:cart_view' %}" class="btn btn-buy"><i class="bi bi-cart-plus"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Product 3 -->
+            <div class="col-lg-3 col-md-6">
+                <div class="product-card">
+                    <div class="card-img-wrapper">
+                        <img src="https://images.unsplash.com/photo-1449426468159-d96dbf08f19f?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="BMW R1250 GS">
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small">Adventure</span>
+                            <div class="text-warning small"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star"></i></div>
+                        </div>
+                        <h5 class="card-title">BMW R 1250 GS</h5>
+                        <p class="card-text">1254cc. Ông vua của những cung đường địa hình.</p>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <span class="price">629.000.000đ</span>
+                            <a href="{% url 'shops:cart_view' %}" class="btn btn-buy"><i class="bi bi-cart-plus"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Product 4 -->
+            <div class="col-lg-3 col-md-6">
+                <div class="product-card">
+                    <div class="card-img-wrapper">
+                        <span class="badge-custom" style="background-color: #17a2b8;">Khuyến mãi</span>
+                        <img src="https://images.unsplash.com/photo-1542456079-66cf574227ad?ixlib=rb-4.0.3&auto=format&fit=crop&w=600&q=80" alt="Ducati Panigale V4">
+                    </div>
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <span class="text-muted small">Sportbike</span>
+                            <div class="text-warning small"><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i><i class="bi bi-star-fill"></i></div>
+                        </div>
+                        <h5 class="card-title">Ducati Panigale V4</h5>
+                        <p class="card-text">1103cc. Biểu tượng tốc độ đến từ nước Ý.</p>
+                        <div class="d-flex justify-content-between align-items-center mt-3">
+                            <span class="price">985.000.000đ</span>
+                            <a href="{% url 'shops:cart_view' %}" class="btn btn-buy"><i class="bi bi-cart-plus"></i></a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="text-center mt-5">
+            <a href="{% url 'shops:product_list' %}" class="btn btn-outline-dark px-4 py-2 fw-bold" style="border-radius: 30px;">Xem Tất Cả Sản Phẩm</a>
+        </div>
+    </div>
+</section>
+
+<!-- Call to Action / Features -->
+<section class="features-section">
+    <div class="container">
+        <div class="row">
+            <div class="col-md-3">
+                <div class="feature-box">
+                    <i class="bi bi-shield-check feature-icon"></i>
+                    <h4 class="feature-title">Bảo hành chính hãng</h4>
+                    <p class="text-secondary small">Tất cả xe bảo hành chính hãng từ 2-3 năm theo tiêu chuẩn.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="feature-box">
+                    <i class="bi bi-tools feature-icon"></i>
+                    <h4 class="feature-title">Bảo dưỡng định kỳ</h4>
+                    <p class="text-secondary small">Trung tâm bảo hành với đội ngũ kỹ thuật viên chuyên nghiệp.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="feature-box">
+                    <i class="bi bi-credit-card feature-icon"></i>
+                    <h4 class="feature-title">Trả góp 0%</h4>
+                    <p class="text-secondary small">Hỗ trợ trả góp qua thẻ tín dụng và các công ty tài chính.</p>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="feature-box">
+                    <i class="bi bi-truck feature-icon"></i>
+                    <h4 class="feature-title">Giao xe tận nhà</h4>
+                    <p class="text-secondary small">Miễn phí giao xe chuyên dụng trong khu vực nội thành.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>
+{% endblock %}

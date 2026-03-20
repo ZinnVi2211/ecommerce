@@ -1,0 +1,180 @@
+{% extends 'shops/base.html' %}
+{% load humanize %}
+
+{% block title %}Thanh toán | MotoShop{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="mb-4">Thanh toán</h2>
+
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}" role="alert">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <div class="row">
+        <div class="col-lg-7">
+            <div class="card shadow-sm p-4 mb-4">
+                <h5 class="mb-3">Thông tin khách hàng</h5>
+                <form method="post" action="{% url 'shops:place_order' %}" novalidate id="checkout-form">
+                    {% csrf_token %}
+                    <div class="row gy-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Họ và tên</label>
+                            {{ form.full_name }}
+                            {{ form.full_name.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Số điện thoại</label>
+                            {{ form.phone }}
+                            {{ form.phone.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Email</label>
+                            {{ form.email }}
+                            {{ form.email.errors }}
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Thành phố</label>
+                            {{ form.city }}
+                            {{ form.city.errors }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Địa chỉ</label>
+                            {{ form.address }}
+                            {{ form.address.errors }}
+                        </div>
+                        <div class="col-12">
+                            <label class="form-label">Phương thức thanh toán</label>
+                            <div class="d-grid gap-2">
+                                {% for radio in form.payment_type %}
+                                <label class="border rounded p-3 d-flex align-items-center gap-2">
+                                    {{ radio.tag }}
+                                    <div>
+                                        <div class="fw-semibold">{{ radio.choice_label }}</div>
+                                        <div class="small text-muted">
+                                            {% if radio.data.value == 'deposit' %}Đặt cọc 10%, thanh toán phần còn lại khi nhận xe{% endif %}
+                                            {% if radio.data.value == 'full' %}Thanh toán toàn bộ giá trị đơn hàng{% endif %}
+                                            {% if radio.data.value == 'showroom' %}Thanh toán trực tiếp tại showroom{% endif %}
+                                            {% if radio.data.value == 'bank_transfer' %}Chuyển khoản ngân hàng, xác nhận trong 1-2 giờ{% endif %}
+                                        </div>
+                                    </div>
+                                </label>
+                                {% endfor %}
+                            </div>
+                            {{ form.payment_type.errors }}
+                        </div>
+                    </div>
+                    <button class="btn btn-success mt-4" type="submit" id="place-order-btn">Place Order</button>
+                </form>
+            </div>
+        </div>
+
+        <div class="col-lg-5">
+            <div class="card shadow-sm p-4">
+                <h5 class="mb-3">Tổng quan đơn hàng</h5>
+                <div class="mb-2">Sản phẩm:</div>
+                <ul class="list-group mb-3">
+                    {% for item in items %}
+                    <li class="list-group-item d-flex justify-content-between align-items-start">
+                        <div>
+                            <div class="fw-semibold">{{ item.product.name }}</div>
+                            <small class="text-muted">x{{ item.quantity }} - {{ item.selected_config.color|default:'Mặc định' }}/{{ item.selected_config.version|default:'Tiêu chuẩn' }}</small>
+                        </div>
+                        <span>{{ item.subtotal|intcomma }}đ</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+
+                <p class="mb-1">Tạm tính: <strong id="subtotal-amount">{{ subtotal|intcomma }}đ</strong></p>
+                <p class="mb-1">Giảm giá: <strong id="discount-amount">{{ discount|intcomma }}đ</strong></p>
+                <hr />
+                <h4>Tổng thanh toán: <strong id="total-amount">{{ total|intcomma }}đ</strong></h4>
+                <div class="mt-3">
+                    <div>Đặt cọc: <strong id="deposit-amount">0đ</strong></div>
+                    <div>Còn lại: <strong id="remaining-amount">0đ</strong></div>
+                </div>
+
+                {% if voucher %}
+                <div class="alert alert-success mt-3">Đã áp dụng voucher <strong>{{ voucher.code }}</strong> ({{
+                    voucher.discount_percent }}%).</div>
+                {% endif %}
+            </div>
+
+            <div class="card shadow-sm p-4 mt-3" id="bank-transfer-box" style="display: none;">
+                <h6 class="mb-2">Thông tin chuyển khoản</h6>
+                <div>Ngân hàng: <strong>DEMO BANK</strong></div>
+                <div>Số tài khoản: <strong>123456789</strong></div>
+                <div>Nội dung: <strong>ORDER_{{ request.user.id|default:'GUEST' }}</strong></div>
+                <div class="mt-3">
+                    <img src="https://api.qrserver.com/v1/create-qr-code/?size=180x180&data=DEMO_BANK_123456789" alt="QR" class="border rounded">
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+    const totalEl = document.getElementById('total-amount');
+    const depositEl = document.getElementById('deposit-amount');
+    const remainingEl = document.getElementById('remaining-amount');
+    const bankBox = document.getElementById('bank-transfer-box');
+    const form = document.getElementById('checkout-form');
+    const btn = document.getElementById('place-order-btn');
+
+    function parseMoney(text) {
+        return Number(String(text).replace(/[^\d]/g, '')) || 0;
+    }
+
+    function formatMoney(n) {
+        return `${Math.round(n).toLocaleString()}đ`;
+    }
+
+    function updatePayment() {
+        const total = parseMoney(totalEl.textContent);
+        const selected = document.querySelector('input[name="payment_type"]:checked');
+        if (!selected) return;
+
+        let deposit = 0;
+        let remaining = total;
+
+        if (selected.value === 'deposit') {
+            deposit = Math.round(total * 0.1);
+            remaining = total - deposit;
+        } else if (selected.value === 'full') {
+            deposit = total;
+            remaining = 0;
+        } else if (selected.value === 'showroom') {
+            deposit = 0;
+            remaining = total;
+        } else {
+            deposit = total;
+            remaining = 0;
+        }
+
+        depositEl.textContent = formatMoney(deposit);
+        remainingEl.textContent = formatMoney(remaining);
+        bankBox.style.display = selected.value === 'bank_transfer' ? 'block' : 'none';
+    }
+
+    document.querySelectorAll('input[name="payment_type"]').forEach(radio => {
+        radio.addEventListener('change', updatePayment);
+    });
+
+    updatePayment();
+
+    if (form && btn) {
+        form.addEventListener('submit', () => {
+            btn.disabled = true;
+            btn.textContent = 'Processing...';
+        });
+    }
+})();
+</script>
+{% endblock %}

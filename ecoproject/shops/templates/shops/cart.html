@@ -1,0 +1,147 @@
+{% extends 'shops/base.html' %}
+{% load humanize %}
+
+{% block title %}Giỏ hàng | MotoShop{% endblock %}
+
+{% block content %}
+<div class="container py-5">
+    <h2 class="mb-4">Giỏ hàng</h2>
+
+    {% if messages %}
+    <div class="mb-3">
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }}" role="alert">{{ message }}</div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    {% if items %}
+    <div class="row">
+        <div class="col-lg-8">
+            <table class="table table-hover align-middle border rounded">
+                <thead class="table-light">
+                    <tr>
+                        <th>Sản phẩm</th>
+                        <th>Giá</th>
+                        <th>Số lượng</th>
+                        <th>Thành tiền</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in items %}
+                    <tr>
+                        <td>
+                            <div class="d-flex align-items-center gap-3">
+                                {% if item.product.image_url %}
+                                <img src="{{ item.product.image_url }}" alt="{{ item.product.name }}" class="rounded"
+                                    width="75" height="55" style="object-fit: cover;" />
+                                {% elif item.product.image %}
+                                <img src="{{ item.product.image.url }}" alt="{{ item.product.name }}" class="rounded"
+                                    width="75" height="55" style="object-fit: cover;" />
+                                {% endif %}
+                                <div>
+                                    <h6 class="mb-1">{{ item.product.name }}</h6>
+                                    <small class="text-muted">{{ item.selected_config.color|default:'Mặc định' }} / {{
+                                        item.selected_config.version|default:'Tiêu chuẩn' }}</small>
+                                </div>
+                            </div>
+                        </td>
+                        <td>{{ item.product.price|intcomma }}đ</td>
+                        <td>
+                            <form method="post" action="{% url 'shops:update_cart_item' item.id %}"
+                                class="d-flex gap-2 align-items-center">
+                                {% csrf_token %}
+                                <input type="number" name="quantity" value="{{ item.quantity }}" min="1"
+                                    max="{{ item.product.stock }}" class="form-control" style="width: 80px;" />
+                                <button type="submit" class="btn btn-sm btn-secondary">Cập nhật</button>
+                            </form>
+                        </td>
+                        <td>{{ item.subtotal|intcomma }}đ</td>
+                        <td>
+                            <a href="{% url 'shops:remove_from_cart' item.id %}"
+                                class="btn btn-sm btn-outline-danger">Xóa</a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card p-3 shadow-sm">
+                <h5>Tóm tắt đơn hàng</h5>
+                <hr />
+                <p>Tạm tính: <strong id="subtotal-amount">{{ subtotal|intcomma }}đ</strong></p>
+                <p>Giảm giá: <strong id="discount-amount">{{ discount|intcomma }}đ</strong></p>
+                <h4>Tổng cộng: <strong id="total-amount">{{ total|intcomma }}đ</strong></h4>
+
+                <form method="post" action="{% url 'shops:apply_voucher' %}" class="input-group mb-3" id="voucher-form">
+                    {% csrf_token %}
+                    <input name="code" type="text" class="form-control" placeholder="Mã voucher" required value="{% if voucher %}{{ voucher.code }}{% endif %}">
+                    <button type="submit" class="btn btn-success">Áp dụng</button>
+                </form>
+                <div id="voucher-message" class="small"></div>
+
+                <a class="btn btn-primary w-100" href="{% url 'shops:checkout_view' %}">Tiến hành thanh toán</a>
+            </div>
+
+            <div class="mt-3 small text-muted">Ghi chú: giá trị đơn hàng được tính trên server để tránh thao túng.</div>
+        </div>
+    </div>
+    {% else %}
+    <div class="text-center py-5">
+        <h4>Giỏ hàng của bạn đang trống</h4>
+        <p>Hãy thêm xe vào giỏ và quay lại trang thanh toán.</p>
+        <a href="{% url 'shops:product_list' %}" class="btn btn-outline-primary">Tiếp tục mua sắm</a>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(() => {
+    const form = document.getElementById('voucher-form');
+    const messageBox = document.getElementById('voucher-message');
+    const subtotalEl = document.getElementById('subtotal-amount');
+    const discountEl = document.getElementById('discount-amount');
+    const totalEl = document.getElementById('total-amount');
+
+    if (!form) return;
+
+    form.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const formData = new FormData(form);
+
+        try {
+            const res = await fetch(form.action, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: formData
+            });
+            const data = await res.json();
+
+            if (data.success) {
+                messageBox.className = 'small text-success';
+                messageBox.textContent = `Áp dụng voucher ${data.code} thành công (${data.discount_percent}%).`;
+            } else {
+                messageBox.className = 'small text-danger';
+                messageBox.textContent = data.message || 'Voucher không hợp lệ.';
+            }
+
+            if (subtotalEl && discountEl && totalEl) {
+                subtotalEl.textContent = `${Math.round(data.subtotal).toLocaleString()}đ`;
+                discountEl.textContent = `${Math.round(data.discount).toLocaleString()}đ`;
+                totalEl.textContent = `${Math.round(data.total).toLocaleString()}đ`;
+            }
+        } catch (err) {
+            messageBox.className = 'small text-danger';
+            messageBox.textContent = 'Không thể áp dụng voucher lúc này. Vui lòng thử lại.';
+        }
+    });
+})();
+</script>
+{% endblock %}
