@@ -1,7 +1,7 @@
 from django.shortcuts import render, get_object_or_404, redirect
 from django.contrib.auth.decorators import login_required
 from django.views.generic import ListView, DetailView
-from django.http import Http404, JsonResponse, HttpResponse
+from django.http import Http404, JsonResponse, HttpResponse, HttpResponseForbidden
 from django.contrib.admin.views.decorators import staff_member_required
 from django.contrib import messages
 from django.db import transaction
@@ -10,8 +10,18 @@ from django.db.models.functions import TruncDate, Coalesce
 from django.utils import timezone
 from django.urls import reverse
 from datetime import timedelta, datetime
+from io import BytesIO
 import json
 import csv
+import xml.etree.ElementTree as ET
+
+from reportlab.lib.pagesizes import A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet
+from reportlab.lib.units import mm
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle
+from reportlab.graphics.shapes import Drawing, Circle, String
+from reportlab.graphics.barcode.qr import QrCodeWidget
 
 from .models import (
     Cart,
@@ -895,6 +905,169 @@ def order_cancel(request, pk):
         else:
             messages.error(request, 'Không thể hủy đơn hàng này.')
     return redirect('shops:order_detail', pk=pk)
+
+
+def _order_access_allowed(user, order):
+    if not user.is_authenticated:
+        return False
+    if user.is_staff:
+        return True
+    if order.user_id:
+        return order.user_id == user.id
+    return False
+
+
+def _invoice_number(order):
+    return f"INV-{order.created_at:%Y}-{order.id:04d}"
+
+
+def export_order_pdf(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    if not _order_access_allowed(request.user, order):
+        return HttpResponseForbidden('Access denied')
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer,
+        pagesize=A4,
+        rightMargin=24,
+        leftMargin=24,
+        topMargin=24,
+        bottomMargin=24
+    )
+    styles = getSampleStyleSheet()
+    story = []
+
+    logo = Drawing(36 * mm, 18 * mm)
+    logo.add(Circle(9 * mm, 9 * mm, 8 * mm, fillColor=colors.red, strokeColor=colors.red))
+    logo.add(String(9 * mm, 6 * mm, 'M', textAnchor='middle', fillColor=colors.white, fontSize=12))
+
+    story.append(logo)
+    story.append(Paragraph('<b>DEMO MOTOR SHOP</b>', styles['Title']))
+    story.append(Paragraph(f'Order Export - {_invoice_number(order)}', styles['Heading2']))
+    story.append(Spacer(1, 8))
+
+    payment_type = getattr(order, 'get_payment_type_display', None)
+    payment_status = getattr(order, 'get_payment_status_display', None)
+    payment_type_text = payment_type() if callable(payment_type) else order.payment_type
+    payment_status_text = payment_status() if callable(payment_status) else order.payment_status
+
+    info_data = [
+        ['Order ID', f'#{order.id}'],
+        ['Invoice No.', _invoice_number(order)],
+        ['Customer', order.full_name],
+        ['Phone', order.phone],
+        ['Address', order.address],
+        ['Payment Type', payment_type_text],
+        ['Payment Status', payment_status_text],
+        ['Created At', timezone.localtime(order.created_at).strftime('%Y-%m-%d %H:%M')],
+    ]
+    info_table = Table(info_data, colWidths=[110, 380])
+    info_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.whitesmoke),
+        ('TEXTCOLOR', (0, 0), (0, -1), colors.black),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('GRID', (0, 0), (-1, -1), 0.25, colors.lightgrey),
+    ]))
+    story.append(info_table)
+    story.append(Spacer(1, 12))
+
+    items = order.items.select_related('product').all()
+    items_data = [['Product', 'Quantity', 'Price']]
+    for item in items:
+        items_data.append([
+            item.product.name,
+            str(item.quantity),
+            f"{item.price}",
+        ])
+
+    items_table = Table(items_data, colWidths=[280, 80, 130])
+    items_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.black),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 10),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.whitesmoke, colors.lightgrey]),
+        ('GRID', (0, 0), (-1, -1), 0.25, colors.grey),
+        ('ALIGN', (1, 1), (-1, -1), 'CENTER'),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+    ]))
+    story.append(items_table)
+    story.append(Spacer(1, 12))
+
+    summary_data = [
+        ['Total', f"{order.total_price}"],
+        ['Payment Type', payment_type_text],
+        ['Date', timezone.localtime(order.created_at).strftime('%Y-%m-%d')],
+    ]
+    summary_table = Table(summary_data, colWidths=[140, 320])
+    summary_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (0, -1), colors.whitesmoke),
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, -1), 10),
+        ('GRID', (0, 0), (-1, -1), 0.25, colors.lightgrey),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 6),
+        ('TOPPADDING', (0, 0), (-1, -1), 6),
+    ]))
+    story.append(summary_table)
+    story.append(Spacer(1, 10))
+
+    qr_value = f"ORDER:{order.id}|INVOICE:{_invoice_number(order)}|TOTAL:{order.total_price}"
+    qr_code = QrCodeWidget(qr_value)
+    bounds = qr_code.getBounds()
+    qr_width = bounds[2] - bounds[0]
+    qr_height = bounds[3] - bounds[1]
+    qr_size = 28 * mm
+    qr_drawing = Drawing(qr_size, qr_size, transform=[qr_size / qr_width, 0, 0, qr_size / qr_height, 0, 0])
+    qr_drawing.add(qr_code)
+    story.append(Paragraph('Scan for order details', styles['Normal']))
+    story.append(qr_drawing)
+
+    doc.build(story)
+    pdf = buffer.getvalue()
+    buffer.close()
+
+    response = HttpResponse(content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename=\"order_{order.id}.pdf\"'
+    response.write(pdf)
+    return response
+
+
+def export_invoice_xml(request, order_id):
+    order = get_object_or_404(Order, id=order_id)
+    if not _order_access_allowed(request.user, order):
+        return HttpResponseForbidden('Access denied')
+
+    root = ET.Element('Invoice')
+    ET.SubElement(root, 'Seller').text = 'DEMO MOTOR SHOP'
+    ET.SubElement(root, 'InvoiceNumber').text = _invoice_number(order)
+
+    buyer = ET.SubElement(root, 'Buyer')
+    ET.SubElement(buyer, 'Name').text = order.full_name
+    ET.SubElement(buyer, 'Phone').text = order.phone
+    ET.SubElement(buyer, 'Address').text = order.address
+
+    items_el = ET.SubElement(root, 'Items')
+    for item in order.items.select_related('product').all():
+        item_el = ET.SubElement(items_el, 'Item')
+        ET.SubElement(item_el, 'Name').text = item.product.name
+        ET.SubElement(item_el, 'Quantity').text = str(item.quantity)
+        ET.SubElement(item_el, 'Price').text = str(item.price)
+
+    ET.SubElement(root, 'Total').text = str(order.total_price)
+    payment_type = getattr(order, 'get_payment_type_display', None)
+    payment_type_text = payment_type() if callable(payment_type) else order.payment_type
+    ET.SubElement(root, 'PaymentType').text = payment_type_text
+    ET.SubElement(root, 'CreatedAt').text = timezone.localtime(order.created_at).isoformat()
+
+    xml_bytes = ET.tostring(root, encoding='utf-8', xml_declaration=True)
+    response = HttpResponse(xml_bytes, content_type='application/xml')
+    response['Content-Disposition'] = f'attachment; filename=\"invoice_{order.id}.xml\"'
+    return response
 
 @login_required
 def order_return_request(request, pk):

@@ -31,7 +31,30 @@
     .btn-action { border-radius: 8px; padding: 0.6rem 1.5rem; font-weight: 700; transition: all 0.2s; font-size: 0.9rem; }
     .btn-cancel-outline { background: #fff; border: 2px solid #e53e3e; color: #e53e3e; }
     .btn-cancel-outline:hover { background: #e53e3e; color: #fff; }
-    
+
+    .btn-export-lite {
+        border: 1px solid #1f2937;
+        color: #1f2937;
+        background: #fff;
+        font-weight: 700;
+        font-size: 0.85rem;
+        border-radius: 8px;
+        padding: 0.5rem 1rem;
+        transition: all 0.2s ease;
+    }
+    .btn-export-lite:hover {
+        background: #1f2937;
+        color: #fff;
+    }
+    .btn-export-xml {
+        border-color: #0d6efd;
+        color: #0d6efd;
+    }
+    .btn-export-xml:hover {
+        background: #0d6efd;
+        color: #fff;
+    }
+
     .admin-panel { background: #1a202c; color: #fff; border-radius: 12px; padding: 1.5rem; }
     .admin-panel select { background: #2d3748; color: #fff; border: 1px solid #4a5568; }
 </style>
@@ -53,6 +76,12 @@
         </div>
         <div class="col-md-4 text-md-end mt-3 mt-md-0">
             <div class="d-flex flex-wrap justify-content-md-end gap-2">
+                <a href="{% url 'shops:export_order_pdf' order.id %}" class="btn btn-export-lite" data-export-link>
+                    <i class="bi bi-file-earmark-pdf me-1"></i>Download PDF
+                </a>
+                <a href="{% url 'shops:export_invoice_xml' order.id %}" class="btn btn-export-lite btn-export-xml" data-export-link>
+                    <i class="bi bi-filetype-xml me-1"></i>Download XML
+                </a>
                 <span class="order-status-badge status-{{ order.status }}">
                     <i class="bi bi-circle-fill me-1" style="font-size: 0.5rem; vertical-align: middle;"></i>
                     {{ order.get_status_display }}

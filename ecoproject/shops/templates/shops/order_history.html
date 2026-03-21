@@ -87,6 +87,29 @@
         color: white;
         transform: scale(1.05);
     }
+    .btn-export {
+        border: 1px solid #121212;
+        color: #121212;
+        background: #fff;
+        padding: 0.45rem 1rem;
+        border-radius: 30px;
+        font-size: 0.8rem;
+        font-weight: 700;
+        transition: all 0.2s ease;
+    }
+    .btn-export:hover {
+        background: #121212;
+        color: #fff;
+        transform: translateY(-1px);
+    }
+    .btn-export-xml {
+        border-color: #0d6efd;
+        color: #0d6efd;
+    }
+    .btn-export-xml:hover {
+        background: #0d6efd;
+        color: #fff;
+    }
 </style>
 {% endblock %}
 
@@ -185,9 +208,17 @@
                                         </div>
                                     </td>
                                     <td class="text-end">
-                                        <a href="{% url 'shops:order_detail' order.id %}" class="btn-detail text-decoration-none">
-                                            <i class="bi bi-eye me-1"></i>Chi tiết
-                                        </a>
+                                        <div class="d-flex flex-column align-items-end gap-2">
+                                            <a href="{% url 'shops:order_detail' order.id %}" class="btn-detail text-decoration-none">
+                                                <i class="bi bi-eye me-1"></i>Chi ti?t
+                                            </a>
+                                            <a href="{% url 'shops:export_order_pdf' order.id %}" class="btn-export text-decoration-none" data-export-link>
+                                                <i class="bi bi-file-earmark-pdf me-1"></i>Export PDF
+                                            </a>
+                                            <a href="{% url 'shops:export_invoice_xml' order.id %}" class="btn-export btn-export-xml text-decoration-none" data-export-link>
+                                                <i class="bi bi-filetype-xml me-1"></i>Export XML
+                                            </a>
+                                        </div>
                                     </td>
                                 </tr>
                             {% endfor %}

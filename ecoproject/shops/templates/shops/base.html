@@ -127,6 +127,24 @@
             opacity: 1;
             transform: translateY(0);
         }
+        .download-toast {
+            position: fixed;
+            right: 20px;
+            bottom: 140px;
+            background: #111827;
+            color: #fff;
+            padding: 12px 16px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+            opacity: 0;
+            transform: translateY(10px);
+            transition: all 0.3s ease;
+            z-index: 1055;
+        }
+        .download-toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
@@ -265,6 +283,7 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/js/bootstrap.bundle.min.js"></script>
     <div id="wishlistToast" class="wishlist-toast">Đã cập nhật yêu thích</div>
     <div id="notificationToast" class="notification-toast">Bạn có thông báo mới</div>
+    <div id="downloadToast" class="download-toast">Download started</div>
     <script>
         function getCookie(name) {
             const value = `; ${document.cookie}`;
@@ -284,6 +303,13 @@
             toast.innerHTML = `<strong>${title}</strong><div style="font-size:0.85rem;opacity:0.9">${message}</div>`;
             toast.classList.add('show');
             setTimeout(() => toast.classList.remove('show'), 2200);
+        }
+        function showDownloadToast(message) {
+            const toast = document.getElementById('downloadToast');
+            if (!toast) return;
+            toast.textContent = message || 'Download started';
+            toast.classList.add('show');
+            setTimeout(() => toast.classList.remove('show'), 1800);
         }
         document.addEventListener('click', async (e) => {
             const btn = e.target.closest('[data-wishlist-toggle]');
@@ -383,6 +409,23 @@
             refreshNotifications();
             setInterval(refreshNotifications, 25000);
         }
+
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('[data-export-link]');
+            if (!link) return;
+            if (link.getAttribute('data-loading') === '1') return;
+            const original = link.innerHTML;
+            link.setAttribute('data-loading', '1');
+            link.dataset.originalHtml = original;
+            link.innerHTML = '<span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>Đang tải...';
+            showDownloadToast('Download started');
+            setTimeout(() => {
+                if (link.dataset.originalHtml) {
+                    link.innerHTML = link.dataset.originalHtml;
+                }
+                link.setAttribute('data-loading', '0');
+            }, 3000);
+        });
     </script>
     {% block extra_js %}{% endblock %}
 </body>

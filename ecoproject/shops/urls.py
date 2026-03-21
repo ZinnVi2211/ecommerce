@@ -40,6 +40,8 @@ urlpatterns = [
     path('order/<int:pk>/return-form/', views.order_return_request_form, name='order_return_request_form'),
     path('admin/returns/', views.admin_return_requests_list, name='admin_return_requests_list'),
     path('order/<int:pk>/confirm-payment/', views.admin_confirm_payment, name='admin_confirm_payment'),
+    path('orders/<int:order_id>/export-pdf/', views.export_order_pdf, name='export_order_pdf'),
+    path('orders/<int:order_id>/export-xml/', views.export_invoice_xml, name='export_invoice_xml'),
     path('product/<slug:slug>/', views.product_detail_view, name='product_detail'),
     # Redirect old motorcycle links to new product detail
     path('motorcycles/<slug:slug>/', RedirectView.as_view(pattern_name='shops:product_detail', permanent=True)),
